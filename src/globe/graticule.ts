@@ -1,8 +1,8 @@
 import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments } from 'three'
+import { GRATICULE_RADIUS } from './config'
 
 const GRATICULE_STEP_DEG = 15
 const GRATICULE_SEGMENTS = 96
-const GRATICULE_RADIUS = 1.001 // un poco por encima de la esfera para evitar z-fighting
 const toRad = Math.PI / 180
 
 const point = (latDeg: number, lonDeg: number, radius: number): [number, number, number] => {

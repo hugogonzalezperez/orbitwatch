@@ -1,5 +1,5 @@
 import { WebGLRenderer } from 'three'
-import { MAX_PIXEL_RATIO } from '../app/config'
+import { MAX_PIXEL_RATIO } from './config'
 
 export const createRenderer = (): WebGLRenderer => {
   const renderer = new WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })

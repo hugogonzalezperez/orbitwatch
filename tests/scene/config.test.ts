@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { INITIAL_DISTANCE, MAX_DISTANCE, MIN_DISTANCE } from '../src/app/config'
+import { INITIAL_DISTANCE, MAX_DISTANCE, MIN_DISTANCE } from '../../src/scene/config'
 
 describe('límites de zoom', () => {
   it('cerca ≈ 2 000 km sobre la superficie (≈ 1,31 unidades del centro)', () => {

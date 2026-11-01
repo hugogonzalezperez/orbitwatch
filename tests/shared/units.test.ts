@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { altitudeKmToDistance, EARTH_RADIUS_KM, kmToUnits } from '../src/shared/units'
+import { altitudeKmToDistance, EARTH_RADIUS_KM, kmToUnits } from '../../src/shared/units'
 
 describe('units', () => {
   it('1 unidad es un radio terrestre', () => {

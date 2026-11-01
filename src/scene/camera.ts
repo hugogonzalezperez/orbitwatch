@@ -1,11 +1,11 @@
-import { PerspectiveCamera } from 'three'
-import { CAMERA_FOV_DEG, INITIAL_DISTANCE } from '../app/config'
+import { MathUtils, PerspectiveCamera } from 'three'
+import { CAMERA_FOV_DEG, INITIAL_DISTANCE, INITIAL_ELEVATION_DEG } from './config'
 import { clipPlanes } from './clipPlanes'
 
-export const createCamera = (aspect: number): PerspectiveCamera => {
-  const camera = new PerspectiveCamera(CAMERA_FOV_DEG, aspect)
-  camera.position.set(0, 0.6, INITIAL_DISTANCE)
-  camera.position.setLength(INITIAL_DISTANCE)
+/** El aspecto lo fija `fitToContainer` al conocer el tamaño real. */
+export const createCamera = (): PerspectiveCamera => {
+  const camera = new PerspectiveCamera(CAMERA_FOV_DEG, 1)
+  camera.position.setFromSphericalCoords(INITIAL_DISTANCE, MathUtils.degToRad(90 - INITIAL_ELEVATION_DEG), 0)
   updateClipPlanes(camera)
   return camera
 }

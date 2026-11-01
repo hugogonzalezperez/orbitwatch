@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_DISTANCE, MIN_DISTANCE } from '../src/app/config'
-import { clipPlanes } from '../src/scene/clipPlanes'
+import { MAX_DISTANCE, MIN_DISTANCE } from '../../src/scene/config'
+import { clipPlanes } from '../../src/scene/clipPlanes'
 
 describe('clipPlanes', () => {
   it('near queda por delante de la superficie y far detrás del globo en todo el rango de zoom', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { graticuleVertices } from '../src/globe/graticule'
+import { graticuleVertices } from '../../src/globe/graticule'
 
 describe('graticuleVertices', () => {
   const radius = 1.001

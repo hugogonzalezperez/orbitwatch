@@ -1,47 +1,32 @@
 import { createGlobe } from '../globe/createGlobe'
-import { createCamera, updateClipPlanes } from '../scene/camera'
+import { createCamera } from '../scene/camera'
 import { createControls } from '../scene/controls'
+import { disposeScene } from '../scene/disposeScene'
 import { createRenderer } from '../scene/renderer'
+import { createRenderLoop } from '../scene/renderLoop'
 import { createSpace } from '../scene/space'
+import { fitToContainer } from '../scene/viewport'
 
 /** Monta el globo en `container` y devuelve la función que libera todos los recursos. */
 export function createEngine(container: HTMLElement): () => void {
   const renderer = createRenderer()
   const scene = createSpace()
-  const camera = createCamera(1)
+  const camera = createCamera()
   const controls = createControls(camera, renderer.domElement)
-  scene.add(createGlobe())
+  const loop = createRenderLoop(renderer, scene, camera, controls)
+  const globe = createGlobe(renderer, loop.invalidate)
+  scene.add(globe.object)
   container.appendChild(renderer.domElement)
-
-  const resize = () => {
-    const { clientWidth: w, clientHeight: h } = container
-    if (!w || !h) return // contenedor oculto: aspect sería Infinity/NaN y la proyección quedaría rota
-    renderer.setSize(w, h)
-    camera.aspect = w / h
-    camera.updateProjectionMatrix()
-  }
-  const observer = new ResizeObserver(resize)
-  observer.observe(container)
-  resize()
-
-  // El bucle de render lo pausa el navegador con la pestaña oculta (requestAnimationFrame).
-  renderer.setAnimationLoop(() => {
-    controls.update()
-    updateClipPlanes(camera)
-    renderer.render(scene, camera)
-  })
+  const stopFitting = fitToContainer(container, renderer, camera, loop.invalidate)
 
   return () => {
-    renderer.setAnimationLoop(null)
-    observer.disconnect()
+    loop.dispose()
+    stopFitting()
     controls.dispose()
-    scene.traverse((o) => {
-      const obj = o as { geometry?: { dispose(): void }; material?: { dispose(): void } }
-      obj.geometry?.dispose()
-      obj.material?.dispose()
-    })
+    globe.dispose()
+    disposeScene(scene)
     renderer.dispose()
-    renderer.forceContextLoss() // los navegadores limitan los contextos WebGL vivos (StrictMode/HMR crean varios)
+    renderer.forceContextLoss() // los navegadores limitan los contextos WebGL vivos (StrictMode y HMR crean varios)
     renderer.domElement.remove()
   }
 }
