@@ -14,9 +14,10 @@ CelesTrak ──(1 petición por grupo, ≤ 1 vez cada 2 h)──> npm run data 
                                               public/data/<grupo>.json + manifest.json
                                                          │ ficheros estáticos
                                                          ▼
-Navegador: manifest → grupos → validación → satellite.js (SGP4) en el hilo principal
-   Enjambre: posiciones + colores en buffers de tamaño fijo → una sola llamada de dibujo
-   Seleccionado: estado completo (altitud, velocidad, sombra) + vuelta actual
+Navegador: manifest → grupos → validación → catálogo (hilo principal) y registros → Worker
+   Worker: SGP4 de todos los satélites cada 10 s de tiempo simulado → posiciones + velocidades (transferidas)
+   Shader: posición + velocidad × tiempo, sombra de la Tierra → una sola llamada de dibujo
+   Seleccionado: estado completo (altitud, velocidad, sombra) + vuelta actual, en el hilo principal
    React: recibe metadatos (catálogo, seleccionado), nunca datos por fotograma
 ```
 
@@ -45,7 +46,8 @@ Navegador: manifest → grupos → validación → satellite.js (SGP4) en el hil
 ## Satélites
 
 - **Catálogo y categorías (`satellites/catalog.ts`, `categories.ts`):** un objeto por número NORAD (gana el primer grupo que lo trae), ordenado por categoría y nombre. La categoría es el grupo de CelesTrak; cada una tiene nombre, tipo («Satélite meteorológico»), color y opacidad.
-- **Enjambre (`propagation/swarm.ts`, `render/swarmPoints.ts`):** todos los satélites en un único `THREE.Points`, con posición, color de categoría y opacidad por punto. `update(fecha)` recalcula posiciones con SGP4 y omite los que SGP4 no puede calcular. Las categorías ocultas no se calculan. Con el reloj acelerado, se recalcula como mucho cada 100 ms.
+- **Enjambre (`propagation/swarm.ts`, `render/swarmPoints.ts`):** un hueco fijo por satélite en buffers de tamaño fijo y un único `THREE.Points`. `createSwarm` pide al Worker una muestra (`Sample`: posiciones y velocidades en radios terrestres, y qué satélites SGP4 pudo calcular) cuando la hora simulada se aleja 10 s de la vigente (`needsRefresh`), con una petición a la vez. El vertex shader mueve cada punto con `posición + velocidad × tiempo` (el tiempo se acota a ±60 s con `extrapolationSeconds`), oscurece lo que cae en la sombra cilíndrica de la Tierra y no dibuja lo inválido ni lo de opacidad 0 (categorías ocultas). Los colores y opacidades (categoría, resaltado de la búsqueda, ocultos) viven en un buffer que solo se vuelve a subir cuando cambian (`colorsVersion`).
+- **Worker (`propagation/propagation.worker.ts`, `batch.ts`, `transport.ts`, `protocol.ts`):** `batch.ts` es el cálculo puro (`createBatch`, `propagateBatch`); el Worker lo ejecuta y devuelve los buffers transferidos, sin copiarlos. `transport.ts` elige entre el Worker y el mismo cálculo en el hilo principal si el navegador no lo permite o falla al arrancar.
 - **Seleccionado (`createSatellites.ts`, `propagation/position.ts`):** estado completo con `stateAt` (posición, geodésicas, velocidad, sombra de la Tierra) y un marcador grande (`render/satellitePoints.ts`). Los datos que no son un número de los elementos se derivan en `satellites/orbitInfo.ts`: periodo, perigeo, apogeo y tipo de órbita (baja < 2 000 km de altura media, media, geosíncrona si el periodo es un día ±2 %, elíptica si la excentricidad es ≥ 0,25, alta por encima).
 - **Órbita (`propagation/orbit.ts`, `render/orbitLine.ts`):** la vuelta que contiene la hora mostrada, de un cruce ascendente del ecuador al siguiente; para las que no cruzan el ecuador o tardan más de 150 min (geoestacionarias, GPS), una vuelta de un periodo desde la época. Dos líneas que comparten vértices (lo recorrido, continua; lo que falta, discontinua) con 600 puntos por vuelta.
 - **Búsqueda:** `searchEntries` (sin tildes, todas las palabras, por nombre, número NORAD o designador) y `rankResults` (el número exacto primero, luego los nombres que empiezan por lo escrito). El globo atenúa lo que no coincide mediante la opacidad del atributo de color; con 500 coincidencias o menos, esas se agrandan.
@@ -66,21 +68,22 @@ React solo aloja el canvas y los paneles. El motor 3D es imperativo (`app/engine
 
 ## Rendimiento
 
-Hecho: límite de `devicePixelRatio` a 2, planos near/far dinámicos, render solo cuando algo cambia (cámara, tamaño o textura nueva; quien cambie la escena llama a `invalidate`), `requestAnimationFrame` (el navegador lo pausa con la pestaña oculta), texturas comprimidas en GPU, Phong en vez de PBR, una sola llamada de dibujo para el enjambre, buffers de tamaño fijo, liberación de recursos al desmontar. Las cifras, con su método, y lo que no está medido, en [docs/RENDIMIENTO.md](docs/RENDIMIENTO.md).
+Hecho: límite de `devicePixelRatio` a 2, planos near/far dinámicos, render solo cuando algo cambia (cámara, tamaño o textura nueva; quien cambie la escena llama a `invalidate`), `requestAnimationFrame` (el navegador lo pausa con la pestaña oculta), texturas comprimidas en GPU, Phong en vez de PBR, una sola llamada de dibujo para el enjambre, cálculo de los satélites en un Worker, buffers de tamaño fijo, liberación de recursos al desmontar. `?perf` muestra métricas en pantalla (`app/perf.ts`, `app/perfHud.ts`). Las cifras, con su método, y lo que no está medido, en [docs/RENDIMIENTO.md](docs/RENDIMIENTO.md).
 
-Pendiente: propagación en Web Worker con interpolación en el shader, calidad adaptativa por tiempo de frame, métricas en pantalla, cribado de acercamientos en cascada (altitud, rejilla espacial, refinado).
+Pendiente: calidad adaptativa por tiempo de frame, cribado de acercamientos en cascada (altitud, rejilla espacial, refinado).
 
 ## Estructura
 
 ```
 src/
-  app/          engine.ts (compone las piezas y devuelve el Engine), clock.ts, startTime.ts, labels.ts
+  app/          engine.ts (compone las piezas y devuelve el Engine), clock.ts, startTime.ts, labels.ts, perf.ts, perfHud.ts
   scene/        infraestructura 3D común: config (zoom, cámara, píxeles), renderer, camera, clipPlanes, picking,
                 flight, framing, starfield, controls, space, renderLoop (dibuja solo si algo cambia), viewport, disposeScene
   globe/        lo propio de la Tierra: config (radios, caras, texturas), earth, clouds, graticule, lighting,
                 sunDisc, atmosphere, textureSource (carga KTX2), createGlobe (giro por GMST)
   satellites/   data/ (omm: validación de registros; fetchGroups: descarga que respeta la política de CelesTrak;
-                groups; manifest; freshness: edad de la época), propagation/ (position, orbit, swarm),
+                groups; manifest; freshness: edad de la época), propagation/ (position, orbit, batch, swarm, transport,
+                protocol, propagation.worker),
                 render/ (satellitePoints, swarmPoints, orbitLine), catalog, categories, orbitInfo,
                 createSatellites, config; conjunctions/ [pendiente]
   ui/           React: App, GlobeCanvas, Search, Legend, VirtualList, virtual, SelectedCard, Rulers, ClockPanel,

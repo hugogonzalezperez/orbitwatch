@@ -7,7 +7,7 @@ Cada decisión indica el motivo, las alternativas que se descartaron y su estado
 OrbitWatch es un visualizador 3D de satélites en órbita, en el navegador, pensado como proyecto de portfolio: que sea vistoso, rápido y que cada decisión técnica esté medida y explicada.
 
 - **Hecho:** globo con texturas, hora simulada, ~11 250 satélites (ISS y estaciones, meteorología, Starlink), búsqueda, leyenda con filtros, ficha con posición y órbita, Sol real, atmósfera y estrellas.
-- **Pendiente:** cribado de acercamientos entre objetos, propagación en un Web Worker, catálogo completo, descarga automática de los datos, métricas en pantalla, versión móvil.
+- **Pendiente:** cribado de acercamientos entre objetos, catálogo completo, descarga automática de los datos, versión móvil.
 - **Fuera de alcance:** cuentas de usuario, base de datos, predicción real de colisiones, propagación en GPU, realidad virtual.
 - **Aviso de honestidad:** con elementos orbitales públicos, la posición tiene errores de kilómetros. El cribado de acercamientos (cuando exista) será un filtro para encontrar candidatos, no una predicción operativa, y la interfaz debe decirlo.
 
@@ -71,11 +71,18 @@ Three.js no libera el buffer de GPU de un atributo que se sustituye. La geometr�
 ### Selección con búsqueda propia, no con un raycaster
 `pickNearest` proyecta cada punto a pantalla y elige el más cercano al puntero dentro de 10 px, ignorando los que tapa la Tierra o quedan detrás de la cámara; sin asignaciones por punto. **Motivo:** lanzar un raycast contra miles de puntos en cada movimiento del ratón es caro. Medido: 0,07 ms de mediana con 11 250 puntos.
 
-### Propagación en el hilo principal, de momento
-Recalcular los ~11 250 satélites cuesta de 10 a 14 ms (medido en Node, ver [RENDIMIENTO.md](RENDIMIENTO.md)). A 1× se hace una vez por segundo; con el reloj acelerado se limita a una vez cada 100 ms. **Pendiente:** pasarlo a un Web Worker con interpolación en el vertex shader, que es lo que haría falta para el catálogo completo (16 847 objetos). No hay cifras fiables publicadas para 30 000 objetos, así que se medirá en equipos reales.
+### El cálculo de los satélites, en un Worker
+Un Worker es un hilo aparte (ver [GLOSARIO.md](GLOSARIO.md)). Recalcular los ~11 250 satélites con SGP4 costaba de 10 a 14 ms en el hilo principal, el mismo que dibuja y atiende al ratón. Ahora el Worker calcula posición y velocidad de todos cada 10 s de tiempo simulado y la página solo recibe el resultado.
+**Entre muestras, extrapolación en el shader.** El vertex shader mueve cada punto con `posición + velocidad × tiempo`. El error de extrapolar es la curvatura de la órbita (½ · v²/r · t²): menos de 0,5 km a 10 s en órbita baja, que es la más curvada (un test lo acota con SGP4 real). Por eso se pide una muestra nueva cada 10 s de tiempo simulado, y mientras llega la siguiente (un salto de hora) el tiempo extrapolado se limita a ±60 s, para que los puntos se queden quietos en vez de salir disparados. A cambio, el movimiento es suave a cualquier velocidad de reloj, sin los saltos de una actualización cada 100 ms.
+**Un hueco fijo por satélite.** Lo inválido (SGP4 no puede calcularlo) o lo oculto (categoría desactivada) se anula con opacidad 0 en el shader, en lugar de compactar los buffers; así el orden no cambia nunca, los colores solo se suben cuando cambian y la selección bajo el puntero usa el mismo índice. La posición bajo el puntero se extrapola en la página (0,08 ms para 11 250 satélites).
+**Sin Worker, sigue funcionando.** Si el navegador no lo permite o falla al arrancar, el mismo cálculo (`batch.ts`) corre en el hilo principal (`transport.ts`).
+**Medido:** hilo principal ×3 más libre con el reloj acelerado y 20 % menos de JavaScript al arrancar; ver [RENDIMIENTO.md](RENDIMIENTO.md).
 
 ### Qué se calcula con detalle y qué no
-Solo el satélite seleccionado tiene velocidad, altitud, sombra de la Tierra y órbita; el resto del enjambre solo tiene posición, color y opacidad. **Motivo:** el coste de `shadowFraction` y de la conversión geodésica por 11 000 objetos y fotograma no compensa lo que aporta.
+Solo el satélite seleccionado tiene altitud, velocidad y órbita, calculados en la página con todo detalle. El enjambre solo tiene posición, velocidad, color y opacidad; su sombra de la Tierra se calcula en el vertex shader (cilindro de radio 1 detrás de la Tierra respecto al Sol, con un borde suave y sin penumbra física), lo que no cuesta nada de CPU. **Motivo:** `shadowFraction` y la conversión geodésica por 11 000 objetos y fotograma no compensan lo que aportan.
+
+### Medidor de rendimiento en pantalla (`?perf`)
+**Motivo:** la GPU real es lo que no se puede medir en el entorno de desarrollo, así que el medidor va dentro de la web y cualquiera puede abrirlo en su equipo. Muestra dibujos por segundo, CPU por dibujo y por actualización, llamadas de dibujo, puntos y el estado del Worker. **Límite:** mide CPU, no el tiempo de la GPU.
 
 ### La órbita: una vuelta, con tres casos
 Se dibuja la vuelta que contiene la hora mostrada, de un cruce ascendente del ecuador al siguiente (rastreo cada 30 s y bisección). Para las órbitas que no cruzan el ecuador o tardan más de 150 min (geoestacionarias, GPS), es una vuelta de un periodo contada desde la época. Lo recorrido va en línea continua y lo que falta, discontinua.

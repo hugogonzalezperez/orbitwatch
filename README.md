@@ -29,6 +29,7 @@ Para quien lo abre desde un portfolio y quiere entender en pocos segundos qué e
 | Interruptor y flecha de cada categoría | Mostrar u ocultar en el globo / desplegar la lista |
 | Controles del reloj | Retroceder, pausar o reanudar, avanzar, y «Ahora» para volver a la hora del equipo |
 | `?t=2026-03-20T14:46:00Z` en la URL | Arranca el reloj en esa hora, en pausa |
+| `?perf` en la URL | Muestra métricas de rendimiento abajo a la derecha (dibujos por segundo, CPU, llamadas de dibujo, Worker) |
 
 La interfaz está pensada para escritorio; en pantallas estrechas aún no se adapta.
 
@@ -53,6 +54,7 @@ Resumen; el detalle y los motivos, en la documentación.
 - **three.js directo** (sin motor geoespacial) y **React solo para los paneles**: el motor 3D es imperativo y no pasa por el estado de React.
 - **Escena inercial:** la cámara no se mueve y la Tierra gira según su ángulo sidéreo, en el mismo marco (TEME) en que SGP4 da las posiciones, así que no hay que convertir cada satélite.
 - **Todo el enjambre en una sola llamada de dibujo** y render solo cuando algo cambia: un globo quieto no gasta GPU.
+- **El cálculo de las órbitas (SGP4) va en un Worker**, un hilo aparte, y entre cálculos el shader mueve cada punto con su velocidad: el hilo que dibuja queda libre (0,7 ms de CPU por actualización a ×600, medido). Ver el [glosario](docs/GLOSARIO.md).
 - **Texturas KTX2** (compresión Basis ETC1S): el mapa de día de 8K pesa 2,6 MB y se queda comprimido en la GPU.
 - **Los datos los baja un script**, no el navegador, para respetar la política de CelesTrak; la web solo lee ficheros estáticos.
 - **Cada afirmación de rendimiento está medida** o dice que no lo está.
@@ -64,6 +66,8 @@ Resumen; el detalle y los motivos, en la documentación.
 - [docs/DATOS.md](docs/DATOS.md): origen de los datos, política de CelesTrak, validación, frescura y tamaños.
 - [docs/RENDIMIENTO.md](docs/RENDIMIENTO.md): qué está medido (y cómo) y qué no.
 - [docs/CONVENCIONES.md](docs/CONVENCIONES.md): reglas del código y los problemas encontrados por el camino.
+- [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md): qué falta para darlo por concluido, por fases.
+- [docs/GLOSARIO.md](docs/GLOSARIO.md): SGP4, Worker, TEME y demás términos.
 - [DESIGN.md](DESIGN.md): el lenguaje visual de la interfaz.
 
 ## Límites conocidos
@@ -75,7 +79,7 @@ Resumen; el detalle y los motivos, en la documentación.
 
 ## Pendiente
 
-Propagación en un Web Worker y catálogo completo (16 847 objetos activos), descarga y despliegue automáticos, cribado de acercamientos entre objetos con su benchmark, país y propietario de cada satélite, colores por régimen orbital, métricas de rendimiento en pantalla, versión móvil, mapa de noche y relieve.
+Catálogo completo (16 847 objetos activos), descarga y despliegue automáticos, cribado de acercamientos entre objetos con su benchmark, país y propietario de cada satélite, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
 
 ## Licencia y créditos
 

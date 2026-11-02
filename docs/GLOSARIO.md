@@ -22,7 +22,7 @@ Los términos técnicos que aparecen en la documentación y en el código.
 
 **Worker (Web Worker).** Un programa de JavaScript que el navegador ejecuta en un hilo aparte, en paralelo a la página. La página (el hilo principal) se encarga de dibujar y de responder al ratón; si hace un cálculo largo, se congela. Un Worker hace el cálculo en segundo plano y le manda el resultado cuando termina, sin bloquear nada. No comparte variables con la página: se comunican con mensajes.
 
-**Extrapolación.** Estimar dónde estará algo un poco después a partir de su posición y velocidad actuales: `posición + velocidad × tiempo`. Aquí se usa entre dos cálculos de SGP4; el error es menor de un kilómetro durante 15 segundos de tiempo simulado.
+**Extrapolación.** Estimar dónde estará algo un poco después a partir de su posición y velocidad actuales: `posición + velocidad × tiempo`. Aquí se usa entre dos cálculos de SGP4; el error es de menos de medio kilómetro durante 10 segundos de tiempo simulado en órbita baja (lo acota un test).
 
 **Shader / vertex shader.** Programa que se ejecuta en la tarjeta gráfica. El *vertex shader* decide dónde se dibuja cada punto; hacerlo ahí es muy barato porque la GPU procesa miles de puntos a la vez.
 

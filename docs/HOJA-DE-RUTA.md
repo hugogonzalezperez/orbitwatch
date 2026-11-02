@@ -2,33 +2,33 @@
 
 Qué falta para dar OrbitWatch por concluido, en fases con hitos comprobables. Se marca cada casilla cuando está hecha **y verificada**; el criterio de cada fase dice cómo se comprueba. Las decisiones y su motivo están en [DECISIONES.md](DECISIONES.md); lo medido, en [RENDIMIENTO.md](RENDIMIENTO.md); los términos técnicos, en [GLOSARIO.md](GLOSARIO.md).
 
-Estado a 2026-11-02: la web funciona de punta a punta con ~11 250 satélites (ISS, estaciones, meteorología y Starlink), pero los datos se descargan a mano y no hay despliegue.
+Estado a 2026-11-02: las fases A y B están hechas. La web funciona de punta a punta con ~11 250 satélites (ISS, estaciones, meteorología y Starlink) y el cálculo va en un Worker, pero los datos se descargan a mano y no hay despliegue.
 
 ## Fase A: corrección y limpieza
 
 Arreglar lo que la revisión del código y de la interfaz encontró, antes de construir encima.
 
-- [ ] **A1. Arranque más rápido.** Ordenar el catálogo con un `Intl.Collator` reutilizado: 344 ms → 15 ms medido en una prueba aparte. El arranque se añade a `npm run bench`.
-- [ ] **A2. `Esc` con el buscador vacío enfocado** debe cerrar la ficha (hoy se lo traga). La decisión va en una función pura con test.
-- [ ] **A3. Tests de `createSatellites`** (selección, pulsar sobre un punto, categorías ocultas, radio de la órbita) con los datos reales de `tests/fixtures` y un `fetch` falso.
-- [ ] **A4. Quitar duplicados** (`cssColor` está en dos ficheros).
-- [ ] **A5. Guías de interfaz web:** `theme-color` y `color-scheme: dark`; placeholder del buscador con «…» y ejemplo; espacios duros entre cifra y unidad y en los miles; `<aside>` en lugar de `<nav>`; nombre accesible para el canvas; anuncio de la selección para lectores de pantalla; `overscroll-behavior` y `touch-action`; `translate="no"` en nombres; búsqueda sin resultados con una sugerencia.
-- [ ] **A6. La etiqueta del seleccionado** solo se recoloca cuando cambia algo (hoy, en cada fotograma).
-- [ ] **A7. Comentarios:** bloques de 3 o más líneas recortados a 2.
-- [ ] **A8. `engines`** en `package.json`.
+- [x] **A1. Arranque más rápido.** Catálogo ordenado con un `Intl.Collator` reutilizado: 450 ms → 34 ms con los datos reales. El arranque está en `npm run bench`.
+- [x] **A2. `Esc` con el buscador vacío enfocado** debe cerrar la ficha (hoy se lo traga). La decisión va en una función pura con test.
+- [x] **A3. Tests de `createSatellites`** (selección, pulsar sobre un punto, categorías ocultas, radio de la órbita) con los datos reales de `tests/fixtures` y un `fetch` falso.
+- [x] **A4. Quitar duplicados** (`cssColor` está en dos ficheros).
+- [x] **A5. Guías de interfaz web:** `theme-color` y `color-scheme: dark`; placeholder del buscador con «…» y ejemplo; espacios duros entre cifra y unidad y en los miles; `<aside>` en lugar de `<nav>`; nombre accesible para el canvas; anuncio de la selección para lectores de pantalla; `overscroll-behavior` y `touch-action`; `translate="no"` en nombres; búsqueda sin resultados con una sugerencia.
+- [x] **A6. La etiqueta del seleccionado** solo se recoloca cuando cambia algo (hoy, en cada fotograma).
+- [x] **A7. Comentarios:** bloques de 3 o más líneas recortados a 2.
+- [x] **A8. `engines`** en `package.json`.
 
-**Criterio:** `npm test`, `npm run typecheck` y `npm run build` en verde, y comprobado en el navegador (buscador, ficha, `Esc`, unidades).
+**Criterio:** `npm test`, `npm run typecheck` y `npm run build` en verde, y comprobado en el navegador (buscador, ficha, `Esc`, unidades). **Cumplido:** 257 tests, typecheck y build en verde; `Esc`, etiqueta, semántica, placeholder y espacios duros comprobados en el navegador.
 
 ## Fase B: rendimiento
 
 Sacar el cálculo de los satélites del hilo principal y poder medir en cualquier equipo. Qué es un Worker y SGP4: [GLOSARIO.md](GLOSARIO.md).
 
-- [ ] **B1. Medidor `?perf`:** renders por segundo, tiempo de CPU por fotograma, llamadas de dibujo, puntos, tiempo del cálculo y antigüedad de la última muestra. Para medir en una GPU real sin herramientas.
-- [ ] **B2. Cálculo en un Worker con extrapolación en el shader.** El Worker calcula posición y velocidad de todos los satélites cada pocos segundos de tiempo simulado; el vertex shader mueve cada punto con `posición + velocidad × tiempo` entre muestras. Un hueco fijo por satélite: se oculta con opacidad 0 y solo se suben posiciones. Sin Worker (entornos de prueba), el mismo cálculo corre en el hilo principal.
-- [ ] **B3. Sombra de la Tierra en el shader** para todo el enjambre.
-- [ ] **B4. Medir antes y después** y actualizar [RENDIMIENTO.md](RENDIMIENTO.md) y [ARCHITECTURE.md](../ARCHITECTURE.md).
+- [x] **B1. Medidor `?perf`:** renders por segundo, tiempo de CPU por fotograma, llamadas de dibujo, puntos, tiempo del cálculo y antigüedad de la última muestra. Para medir en una GPU real sin herramientas.
+- [x] **B2. Cálculo en un Worker con extrapolación en el shader.** El Worker calcula posición y velocidad de todos los satélites cada pocos segundos de tiempo simulado; el vertex shader mueve cada punto con `posición + velocidad × tiempo` entre muestras. Un hueco fijo por satélite: se oculta con opacidad 0 y solo se suben posiciones. Sin Worker (entornos de prueba), el mismo cálculo corre en el hilo principal.
+- [x] **B3. Sombra de la Tierra en el shader** para todo el enjambre.
+- [x] **B4. Medir antes y después** y actualizar [RENDIMIENTO.md](RENDIMIENTO.md) y [ARCHITECTURE.md](../ARCHITECTURE.md).
 
-**Criterio:** el hilo principal no calcula órbitas del enjambre; el arranque ya no hace `json2satrec` de 11 250 objetos; el error de la extrapolación está acotado con un test; todo comprobado en el navegador.
+**Criterio:** el hilo principal no calcula órbitas del enjambre; el arranque ya no hace `json2satrec` de 11 250 objetos; el error de la extrapolación está acotado con un test; todo comprobado en el navegador. **Cumplido:** hilo principal ×3 más libre con el reloj acelerado (16 % → 5,5 % de JavaScript) y 20 % menos de JavaScript al arrancar; error de extrapolación < 0,5 km a 10 s (test); sombra comprobada con la misma hora fija (−38 % de brillo en 25 960 píxeles). Cifras y método en [RENDIMIENTO.md](RENDIMIENTO.md).
 
 ## Fase C: publicar
 

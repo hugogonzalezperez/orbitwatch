@@ -22,6 +22,10 @@ Reglas que conviene respetar al tocar el código, y los problemas reales que las
 - Al centrar la cámara en un satélite, comprobar la orientación: en el plano de la órbita, la elipse se ve de canto.
 - Las listas de la leyenda son virtuales (`VirtualList`): la altura de fila vive en `ROW_HEIGHT` y en `.vlist-row` y `.legend-sat` del CSS, y hay que tocarlas a la vez.
 
+**Cálculo del enjambre**
+- SGP4 de todos los satélites va en el Worker (`propagation/batch.ts` es el cálculo puro, también lo usa el hilo principal si no hay Worker). Entre muestras, el shader mueve cada punto con su velocidad: no se vuelve a propagar en el hilo principal. Cambiar `REFRESH_SECONDS` o `MAX_EXTRAPOLATION_SECONDS` exige revisar el test del error de extrapolación.
+- El enjambre tiene un hueco fijo por satélite: se oculta con opacidad 0, nunca se compactan los buffers.
+
 **Datos**
 - El navegador nunca llama a CelesTrak. Solo el script de datos, una vez por actualización (cada 2 h) y parando ante cualquier respuesta distinta de 200. Se usa OMM en JSON, no TLE.
 
@@ -53,4 +57,5 @@ En un entorno sin GPU, Chrome DevTools no crea WebGL, pero funciona `google-chro
 | La órbita se veía de canto | Al centrar, la cámara quedaba en el plano de la órbita | Inclinación de 35° (`FOCUS_TILT_DEG`) |
 | Satélites geoestacionarios recortados o fuera de pantalla | Plano lejano a `distancia + 1`; zoom máximo de 10 radios; encuadre sin contar la perspectiva | `MAX_ORBIT_RADIUS` en el plano lejano, zoom hasta 19,8 y `framingDistance` con la perspectiva; ver [DECISIONES.md](DECISIONES.md) |
 | El satélite elegido quedaba tapado por el reloj | El punto cercano de la órbita cae siempre abajo | `focusDirection` elige el lado de la inclinación que lo deja arriba |
+| La etiqueta de lo que había bajo el puntero se quedaba tras ocultar la categoría o avanzar el reloj | Solo se comprobaba al mover el ratón | Se vuelve a comprobar en cada actualización con la última posición del puntero |
 | Las órbitas geoestacionarias no se dibujaban | El rastreo del cruce del ecuador solo miraba 150 min y la órbita casi no cruza el ecuador | Una vuelta de un periodo desde la época como alternativa |
