@@ -15,9 +15,8 @@ interface Framing {
 }
 
 /**
- * Distancia de la cámara al centro a la que se ve el satélite con su órbita: el punto más cercano (el que más se abre por
- * la perspectiva) y los laterales caben en `FRAMING_MARGIN` del campo. Respeta la distancia actual si es menor que la
- * habitual; si es mayor, vuelve a ella salvo que la órbita pida más. Siempre dentro de los límites del zoom.
+ * Distancia de la cámara al centro a la que caben el satélite y su órbita (el punto más cercano, el que más se abre por la
+ * perspectiva, y los laterales, dentro de `FRAMING_MARGIN`). Conserva la distancia actual si es menor que la habitual.
  */
 export function framingDistance({ orbitRadius, tiltRad, fovDeg, aspect, currentDistance }: Framing): number {
   const halfVertical = (fovDeg / 2) * (Math.PI / 180)
