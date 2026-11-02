@@ -39,9 +39,17 @@ Navegador: fetch manifest → fetch grupos → Web Worker
 - **Nubes:** segunda esfera (radio 1,002 ≈ 13 km) con una textura de un canal como opacidad. Es una foto fija, no el tiempo real. Su malla es de 128×64 porque con menos caras el centro de cada cara se hunde bajo la Tierra y salen rombos (lo cubre un test). Se desactivan con `CLOUDS_ENABLED`.
 - **Unidad de escena:** 1 = un radio terrestre (6 371 km). Mantiene la precisión de float32.
 
+## Tiempo y marco de referencia
+
+- **Escena inercial (ECI):** la cámara está fija en el espacio; la Tierra gira dentro de la escena según su ángulo sidéreo (GMST) y los satélites se mueven en el mismo marco que SGP4 (TEME). Eje Y arriba: `temeToScene` hace (x, y, z) → (x, z, −y) y es la misma convención que la rejilla y la textura. Un test comprueba que la longitud geodésica de la ISS coincide con la de la escena menos el giro de la Tierra.
+- **Reloj (`app/clock.ts`):** hora simulada = hora real × velocidad, con velocidades negativas, pausa, salto y `resetToNow()` (vuelve a la hora del equipo, a 1x y sin pausa). Cambiar de velocidad no da saltos. `?t=2026-03-20T14:46:00Z` arranca en esa hora y en pausa (verificación y demostraciones).
+- **Cuándo se dibuja:** a 1x o en pausa, una vez por segundo o nunca; por encima de 1x, en cada fotograma. El reloj avisa de cambios de estado, no del paso del tiempo.
+- **Lo que ya se ve:** solo la ISS, de una instantánea de `stations` (`scripts/update-stations.sh`), sin Action ni validación completa. La interfaz muestra la distancia entre la hora simulada y la época de los elementos, y avisa de que la precisión baja (a partir de 3 días de distancia aviso, desde 7 poco fiable).
+- **Verificado:** la posición calculada coincide a 0,2 km con la API pública wheretheiss.at en el mismo instante (ambas parten de los mismos elementos, así que comprueba las conversiones, no la física de SGP4).
+
 ## Rendimiento
 
-Hecho: límite de `devicePixelRatio` a 2, planos near/far dinámicos, render solo cuando algo cambia (cámara, tamaño o textura nueva; quien cambie la escena llama a `invalidate`), `requestAnimationFrame` (el navegador lo pausa con la pestaña oculta), texturas comprimidas en GPU, Phong en vez de PBR, liberación de recursos al desmontar. Medido en Chrome headless: 0 renders en 3 s en reposo, 3 llamadas de dibujo y 32 256 triángulos. Sin medir en una GPU real.
+Hecho: límite de `devicePixelRatio` a 2, planos near/far dinámicos, render solo cuando algo cambia (cámara, tamaño o textura nueva; quien cambie la escena llama a `invalidate`), `requestAnimationFrame` (el navegador lo pausa con la pestaña oculta), texturas comprimidas en GPU, Phong en vez de PBR, liberación de recursos al desmontar. Medido en Chrome headless: 0 renders en 3 s con el reloj en pausa y 1 por segundo a 1x; 4 llamadas de dibujo (Tierra, rejilla, nubes, ISS). Sin medir en una GPU real.
 
 Pendiente: una sola `THREE.Points` para todos los satélites, SGP4 en Web Worker con interpolación en el shader, órbita solo del objeto seleccionado, selección con índice espacial, calidad adaptativa por tiempo de frame, cribado de acercamientos en cascada (altitud, rejilla espacial, refinado).
 
@@ -49,21 +57,23 @@ Pendiente: una sola `THREE.Points` para todos los satélites, SGP4 en Web Worker
 
 ```
 src/
-  app/          engine.ts: compone las piezas y devuelve el dispose
+  app/          engine.ts (compone las piezas y devuelve el Engine), clock.ts, startTime.ts
   scene/        infraestructura 3D común: config.ts (zoom, cámara, píxeles), renderer, camera, clipPlanes,
                 controls, space, renderLoop (dibuja solo si algo cambia), viewport (tamaño), disposeScene
   globe/        lo propio de la Tierra: config.ts (radios, caras, texturas), earth, clouds, graticule,
-                lighting, textureSource (carga KTX2), createGlobe
-  satellites/   data/ (carga, frescura), propagation/ (worker SGP4), conjunctions/ (cribado)  [pendiente]
-  ui/           React: App, GlobeCanvas (aloja el canvas), paneles [pendiente]
-  shared/       units.ts, geometry.ts (matemática sin three ni DOM)
-scripts/        build-textures.sh (descarga y conversión a KTX2); descarga de CelesTrak [pendiente]
-public/         data/ (JSON generados), textures/earth/ (KTX2)
-tests/          espeja src/: Vitest sobre lógica pura y el bucle de render con falsos mínimos
+                lighting, textureSource (carga KTX2), createGlobe (incluye el giro por GMST)
+  satellites/   data/ (stations: lectura y validación mínima de la ISS; freshness: edad de la época),
+                propagation/ (position: SGP4 → escena y geodésicas), render/ (satellitePoints), createSatellites,
+                config; conjunctions/ [pendiente]
+  ui/           React: App, GlobeCanvas (aloja el canvas), ClockPanel, IssPanel, hooks, format, icons
+  shared/       units, geometry, frames (TEME ↔ escena), store (puente motor → React)
+scripts/        build-textures.sh, update-stations.sh; descarga de CelesTrak automatizada [pendiente]
+public/         data/ (instantánea de stations), textures/earth/ (KTX2)
+tests/          espeja src/; datos reales de CelesTrak en tests/fixtures
 .github/workflows/  refresco de datos y despliegue [pendiente]
 ```
 
-Dependencias, sin ciclos: `ui` → `app` → `scene` y `globe` → `shared`. `scene` y `globe` no se conocen entre sí; los datos de satélites entrarán por `app`.
+Dependencias, sin ciclos: `ui` → `app` → `scene`, `globe` y `satellites` → `shared`. Esas tres capas no se conocen entre sí; las junta `app`. El motor 3D es imperativo y expone un `Engine` (reloj, estado de la ISS como `Store`, `focusIss`); React se suscribe con `useSyncExternalStore`.
 
 ## Decisiones
 

@@ -2,7 +2,7 @@
 
 Visualizador 3D de satélites en órbita, en el navegador, con cribado de acercamientos entre objetos. Proyecto de portfolio centrado en rendimiento medido.
 
-**Estado:** globo con fondo negro, rotación y zoom limitado, y Tierra con texturas y nubes. Siguientes: atmósfera, datos de satélites, propagación, cribado. Ver [ARCHITECTURE.md](ARCHITECTURE.md).
+**Estado:** Tierra con texturas y nubes, reloj simulado (adelante, atrás, pausa y vuelta a la hora del equipo) y la ISS moviéndose sobre ella. Siguientes: Sol real y atmósfera, catálogo completo de CelesTrak, cribado. Ver [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Uso
 
@@ -13,6 +13,10 @@ npm test           # tests (Vitest)
 npm run typecheck  # tsc --noEmit
 npm run build      # typecheck + build de producción en dist/
 ```
+
+## Datos de la ISS
+
+`public/data/stations.json` es una instantánea de CelesTrak (grupo `stations`). Para refrescarla: `scripts/update-stations.sh` (una descarga por actualización de CelesTrak, que se actualiza cada 2 h; se detiene ante cualquier respuesta distinta de 200). Mientras no haya Action, la posición pierde precisión con los días y la interfaz lo indica. `?t=2026-03-20T14:46:00Z` en la URL arranca el reloj en esa hora, en pausa.
 
 ## Texturas
 
