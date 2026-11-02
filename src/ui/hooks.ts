@@ -21,3 +21,13 @@ export function useClockTime(clock: Clock, intervalMs = 250): Date {
   }, [clock, intervalMs])
   return time
 }
+
+/** La hora real, refrescada cada `intervalMs`: para textos como «hace 40 min». */
+export function useNow(intervalMs = 30_000): Date {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), intervalMs)
+    return () => clearInterval(id)
+  }, [intervalMs])
+  return now
+}

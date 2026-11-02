@@ -1,95 +1,158 @@
 :root {
-  --ink: #e8e8e8;
+  --ink: #ece8dd;
   --ink-dim: #a3a7ad;
   --panel: #0b0f14;
-  --line: #6b7280; /* borde de controles: 3:1 o más sobre el panel */
+  --field: #05080b;
+  --line: #6b7280; /* bordes de controles y trazos de las reglas: 3:1 o más sobre el panel */
   --line-dim: #2a3038;
-  --accent: #6aa6e8; /* foco, estado en directo y selección: el azul de la Tierra, aclarado */
-  --data: #ffc857; /* la luz de los datos: satélites y su órbita */
+  --accent: #6aa6e8; /* foco, estado del reloj y botón principal: el azul de la Tierra, aclarado */
+  --data: #ffc857; /* el objeto seleccionado y su órbita: la luz de los datos */
   --warn: #ffc857;
   --bad: #ff7b72;
-  --radius: 6px;
+  --radius: 4px;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --serif: 'Source Serif 4 Variable', Georgia, serif; /* nombres de satélites: rótulos de atlas */
 }
 html, body, #root { height: 100%; margin: 0; background: #000; }
-body { color: var(--ink); font: 0.9375rem/1.4 system-ui, sans-serif; }
-.globe { width: 100%; height: 100%; overflow: hidden; }
+body { color: var(--ink); font: 400 0.9375rem/1.45 var(--sans); }
+::selection { background: rgba(106, 166, 232, 0.4); }
+.num { font-variant-numeric: tabular-nums; }
+.note-aging { color: var(--warn); }
+.note-stale { color: var(--bad); }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+h1, h2, h3, p, dl, dd, ul { margin: 0; padding: 0; }
+
+.app { position: fixed; inset: 0; overflow: hidden; }
+.globe { position: absolute; inset: 0; overflow: hidden; }
 .globe canvas { display: block; }
 .globe-error { margin: 0; padding: 2rem; max-width: 65ch; font-size: 1rem; line-height: 1.5; }
 
-/* Superficies: el panel del reloj (abajo) y el de la ISS (a la derecha) comparten fondo, borde y radio. */
-.hud, .side {
-  position: fixed; box-sizing: border-box; background: var(--panel);
-  border: 1px solid var(--line-dim); border-radius: var(--radius);
-}
-.side h2, .side h3 { margin: 0; }
-.hud p, .side p { margin: 0; }
-.dim { color: var(--ink-dim); }
-.accent { color: var(--accent); }
-.note-aging { color: var(--warn); }
-.note-stale { color: var(--bad); }
-
+/* Botones: sin caja por defecto; el principal es el único relleno */
 button {
-  min-width: 44px; min-height: 44px; padding: 0 0.9rem; box-sizing: border-box;
-  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
-  background: transparent; color: var(--ink); font: inherit; font-weight: 600;
-  border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer;
+  min-width: 44px; min-height: 44px; padding: 0 0.75rem; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  background: transparent; color: var(--ink); font: inherit; font-weight: 500;
+  border: 0; border-radius: var(--radius); cursor: pointer;
 }
 button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
-button:focus-visible, .credits a:focus-visible, .side:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button:disabled { opacity: 0.45; cursor: default; }
+button.outline { border: 1px solid var(--line); }
+button.primary { background: var(--accent); color: var(--panel); font-weight: 600; }
+button.primary:hover:not(:disabled) { background: #85b8ee; }
+.icon-button { padding: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Columna izquierda: nombre, buscador y leyenda, directamente sobre el espacio */
+.rail { position: absolute; top: 1.25rem; left: 1.25rem; bottom: 3rem; width: 18.5rem; display: flex; flex-direction: column; gap: 1rem; pointer-events: none; }
+.rail > * { pointer-events: auto; }
+.brand h1 { font: 600 1.5rem/1.1 var(--serif); }
+.brand-line { margin-top: 0.25rem; font-size: 0.8125rem; color: var(--ink-dim); min-height: 1.2em; }
+.brand-line.note-aging { color: var(--warn); }
+.brand-line.note-stale { color: var(--bad); }
+.rail-note { font-size: 0.875rem; color: var(--ink-dim); }
+.rail-note.note-stale { color: var(--bad); }
+
+.search { position: relative; }
+.search input {
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 2.5rem 0 0.75rem; font: inherit; color: var(--ink);
+  background: var(--field); border: 1px solid var(--line); border-radius: var(--radius); caret-color: var(--accent);
+}
+.search input::placeholder { color: var(--ink-dim); opacity: 1; }
+.search input:disabled { opacity: 0.6; }
+.search-hint { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); padding: 0 0.4rem; font: 0.75rem var(--sans); color: var(--ink-dim); border: 1px solid var(--line-dim); border-radius: 3px; pointer-events: none; }
+.results {
+  position: absolute; z-index: 3; left: 0; right: 0; top: calc(100% + 4px); list-style: none; padding: 0.25rem 0;
+  background: var(--panel); border: 1px solid var(--line-dim); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); /* flota sobre la leyenda */
+}
+.results[hidden] { display: none; }
+.results [role='option'] { display: flex; align-items: center; gap: 0.75rem; min-height: 44px; padding: 0 0.75rem; cursor: pointer; }
+.results [role='option'][aria-selected='true'] { background: rgba(106, 166, 232, 0.16); }
+.results-empty { padding: 0.75rem; font-size: 0.875rem; color: var(--ink-dim); }
+.result-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 1rem var(--serif); text-align: left; }
+.result-id { font-size: 0.8125rem; color: var(--ink-dim); }
+
+.swatch { flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--swatch); }
+.swatch-off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--swatch); } /* oculta: hueco, no solo más apagado */
+
+.legend { list-style: none; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.legend-row { display: flex; align-items: center; }
+.legend-toggle { flex: 1; min-width: 0; justify-content: flex-start; gap: 0.75rem; padding: 0 0.5rem; }
+.legend-toggle[aria-pressed='false'] .legend-label { color: var(--ink-dim); }
+.legend-label { flex: 1; text-align: left; }
+.legend-count { font-size: 0.8125rem; font-weight: 400; color: var(--ink-dim); }
+.vlist { overflow-y: auto; margin-bottom: 0.5rem; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.vlist-spacer { position: relative; }
+.vlist-row { position: absolute; left: 0; right: 0; height: 40px; }
+.legend-sat { width: 100%; min-height: 40px; justify-content: flex-start; gap: 0.75rem; padding: 0 0.5rem 0 2rem; font-weight: 400; }
+.legend-sat[aria-current='true'] { color: var(--data); background: rgba(255, 200, 87, 0.1); }
+.legend :focus-visible { outline-offset: -2px; } /* dentro de un contenedor con desplazamiento, un anillo exterior se recortaría */
+.chevron { display: inline-flex; transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1); }
+[aria-expanded='true'] > .chevron { transform: rotate(90deg); }
+
+/* Ficha del satélite seleccionado */
+.card {
+  position: absolute; top: 1.25rem; right: 1.25rem; bottom: 4rem; width: 21rem; max-height: max-content; box-sizing: border-box;
+  overflow-y: auto; padding: 1.25rem; display: grid; align-content: start; gap: 1.25rem;
+  background: var(--panel); border: 1px solid var(--line-dim); border-radius: var(--radius);
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+  animation: card-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes card-in { from { opacity: 0; transform: translateX(0.5rem); } }
+.card-head { display: flex; align-items: start; justify-content: space-between; gap: 0.75rem; }
+.card-name { font: 600 1.5rem/1.15 var(--serif); overflow-wrap: anywhere; }
+.card-kind { margin-top: 0.25rem; font-size: 0.875rem; color: var(--ink-dim); }
+.card-section { display: grid; gap: 0.5rem; }
+.card-section + .card-section { padding-top: 1.25rem; border-top: 1px solid var(--line-dim); }
+.card-where { font-size: 1rem; }
+.card-sun { font-size: 0.875rem; color: var(--ink-dim); }
+.figures { margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.figures dt, .facts dt, .detail dt { font-size: 0.8125rem; color: var(--ink-dim); }
+.figures dd { font: 600 1.75rem/1.1 var(--sans); }
+.unit { font-size: 0.875rem; font-weight: 400; color: var(--ink-dim); }
+.card h3 { font: 600 1.0625rem/1.3 var(--sans); }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.25rem; }
+.facts dd { font-weight: 500; }
+.reliability { font-size: 0.9375rem; }
+.card details { font-size: 0.875rem; }
+.card summary { display: flex; align-items: center; min-height: 32px; cursor: pointer; color: var(--ink-dim); }
+.detail { margin-top: 0.25rem; display: grid; gap: 0.125rem; }
+.detail dd { margin-bottom: 0.5rem; }
+.card-foot { display: grid; gap: 0.75rem; }
+.ids { font-size: 0.8125rem; color: var(--ink-dim); }
+
+/* Reglas graduadas: la altitud y la vuelta comparten el mismo trazo de instrumento */
+.ruler { position: relative; }
+.ruler-track { position: relative; height: 12px; margin: 0.25rem 0; }
+.ruler-track::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+.ruler-tick { position: absolute; top: 2px; width: 1px; height: 8px; background: var(--line); }
+.ruler-marker { position: absolute; top: 1px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--data); }
+.ruler-fill { position: absolute; left: 0; top: calc(50% - 1.5px); height: 3px; background: var(--data); }
+.ruler-labels { position: relative; height: 1rem; font-size: 0.75rem; color: var(--ink-dim); }
+.ruler-labels span { position: absolute; transform: translateX(-50%); }
 
 /* Reloj */
-.hud { left: 50%; bottom: 2rem; transform: translateX(-50%); width: min(30rem, calc(100% - 1.5rem)); padding: 0.75rem 1rem; }
-.clock { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 0.5rem 1rem; }
-.clock-readout { display: grid; }
-.clock-local { font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.clock-utc { color: var(--ink-dim); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
-.clock-mode { color: var(--accent); font-weight: 600; text-align: right; white-space: nowrap; }
-.clock-controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dock { position: absolute; left: 50%; bottom: 1.75rem; transform: translateX(-50%); padding: 0.625rem 0.75rem 0.625rem 1rem; background: var(--panel); border: 1px solid var(--line-dim); border-radius: var(--radius); }
+.clock { display: grid; grid-template-columns: auto auto; grid-template-areas: 'readout controls' 'mode controls'; align-items: center; column-gap: 1.5rem; }
+.clock-readout { grid-area: readout; display: grid; }
+.clock-local { font: 600 1.125rem/1.3 var(--sans); font-variant-numeric: tabular-nums; }
+.clock-utc { font-size: 0.8125rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.clock-mode { grid-area: mode; font-size: 0.8125rem; font-weight: 600; color: var(--accent); }
+.clock-controls { grid-area: controls; display: flex; gap: 0.25rem; }
 
-/* Pestaña para abrir el panel de la ISS cuando está cerrado */
-.side-tab { position: fixed; top: 0.75rem; right: 0.75rem; background: var(--panel); }
+/* Etiquetas sobre el globo: nombre del seleccionado y de lo que hay bajo el puntero */
+.sat-label { position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap; will-change: transform; }
+.sat-label-selected { margin: -0.8rem 0 0 16px; font: 600 1rem/1.2 var(--serif); color: var(--data); text-shadow: 0 0 3px #000, 0 0 7px #000, 0 0 14px #000; } /* el halo negro es para leerlo sobre la Tierra clara */
+.sat-label-selected.left { margin-left: -16px; }
+.sat-label-hover { margin: 12px 0 0 12px; padding: 0.125rem 0.5rem; font: 500 0.8125rem/1.4 var(--sans); color: var(--ink); background: rgba(11, 15, 20, 0.92); border: 1px solid var(--line-dim); border-radius: 3px; }
 
-/* Panel lateral de la ISS */
-.side {
-  top: 0.75rem; right: 0.75rem; width: min(23rem, calc(100% - 1.5rem)); max-height: calc(100% - 1.5rem);
-  overflow-y: auto; padding: 1rem; display: grid; gap: 1rem;
-  animation: side-in 180ms cubic-bezier(0.22, 1, 0.36, 1); /* el panel entra desde el borde del que sale la pestaña */
-}
-@keyframes side-in { from { opacity: 0; transform: translateX(0.75rem); } }
-@media (prefers-reduced-motion: reduce) { .side { animation: none; } }
-
-.side-head { display: flex; align-items: start; justify-content: space-between; gap: 0.75rem; }
-.side-head h2 { font-size: 1.125rem; font-weight: 600; }
-.side-head p { font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
-.side h3 { font-size: 0.8125rem; font-weight: 600; color: var(--ink-dim); margin-bottom: 0.25rem; }
-.side section { border-top: 1px solid var(--line-dim); padding-top: 0.75rem; }
-
-.metrics { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; }
-.metrics dt { color: var(--ink-dim); font-size: 0.8125rem; }
-.metrics dd { margin: 0; font-size: 1.125rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.metrics dd .dim { display: block; font-size: 0.8125rem; font-weight: 400; }
-.metrics .wide { grid-column: 1 / -1; }
-.metrics .wide dd { font-size: 1rem; }
-
-.value { font-weight: 600; font-variant-numeric: tabular-nums; }
-.row { display: grid; gap: 0.125rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
-.row + .row { margin-top: 0.5rem; }
-.row .dim { font-size: 0.8125rem; }
-
-.progress { height: 6px; margin: 0.5rem 0; background: var(--line-dim); border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; background: var(--data); }
-.legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.25rem; color: var(--ink-dim); font-size: 0.8125rem; }
-.swatch { display: inline-block; width: 1.5rem; height: 0; vertical-align: middle; margin-right: 0.35rem; border-top: 2px solid var(--data); }
-.swatch-dashed { border-top-style: dashed; }
-.side footer { border-top: 1px solid var(--line-dim); padding-top: 0.75rem; }
-.side footer button { width: 100%; }
-
-/* Pantallas estrechas: el panel de la ISS es una hoja inferior y sustituye al reloj mientras está abierto. */
-@media (max-width: 40rem) {
-  .side { top: auto; bottom: 2rem; left: 0.75rem; right: 0.75rem; width: auto; max-height: 75%; } /* deja ver los créditos */
-  body:has(.side) .hud { display: none; }
-}
-
-.credits { position: fixed; left: 0.75rem; bottom: 0.5rem; margin: 0; font: 0.75rem system-ui, sans-serif; color: var(--ink-dim); }
+.credits { position: absolute; left: 1.25rem; bottom: 0.75rem; margin: 0; font: 0.75rem var(--sans); color: var(--ink-dim); }
 .credits a { color: inherit; }
+
+/* Ventanas estrechas: la columna izquierda se solapa con el globo, así que lleva fondo propio */
+@media (max-width: 72rem) {
+  .rail { bottom: auto; max-height: calc(100% - 5rem); padding: 0.75rem; background: var(--panel); border: 1px solid var(--line-dim); border-radius: var(--radius); box-sizing: border-box; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .chevron { transition: none; }
+}

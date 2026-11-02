@@ -1,50 +1,78 @@
-import { Group, Vector3, type WebGLRenderer } from 'three'
+import { Color, Group, Vector3, type PerspectiveCamera, type WebGLRenderer } from 'three'
+import { pickNearest } from '../scene/picking'
 import { createStore, type Store } from '../shared/store'
-import { Color } from 'three'
-import { ORBIT_POINTS, SATELLITE_COLOR, SATELLITE_SIZE_PX, SELECTION_COLOR, SWARM_COLORS, SWARM_FALLBACK_COLOR, SWARM_SIZE_PX } from './config'
-import { findIss } from './data/groups'
+import { EARTH_RADIUS_KM } from '../shared/units'
+import { buildCatalog, type CatalogEntry } from './catalog'
+import { describeOrbit, type OrbitDescription } from './orbitInfo'
+import { getCategory } from './categories'
+import { ORBIT_POINTS, SATELLITE_COLOR, SATELLITE_SIZE_PX, SELECTION_COLOR, SWARM_HIT_RADIUS_PX, SWARM_SIZE_PX } from './config'
 import { parseManifest } from './data/manifest'
-import { epochDate, parseOmmList, type OmmRecord } from './data/omm'
+import { parseOmmList, epochDate, type OmmRecord } from './data/omm'
 import { currentRevolution, orbitProgress, sampleOrbit, type Revolution } from './propagation/orbit'
 import { createTracked, stateAt, type SatelliteState, type Tracked } from './propagation/position'
-import { createSwarm, type Swarm } from './propagation/swarm'
+import { createSwarm, type Swarm, type SwarmFrame } from './propagation/swarm'
 import { createOrbitLine } from './render/orbitLine'
 import { createSatellitePoints } from './render/satellitePoints'
 import { createSwarmPoints } from './render/swarmPoints'
 
-export type SatelliteId = 'iss'
+/** Número de catálogo NORAD. */
+export type SatelliteId = number
 
-export type IssStatus =
+export const ISS_ID: SatelliteId = 25544
+
+export type DataStatus =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
   | {
       kind: 'ready'
-      name: string
-      noradId: number
-      designator: string
-      /** Época de los elementos orbitales. */
-      epoch: Date
-      /** Cuándo se descargaron de CelesTrak; `null` si no hay manifiesto. */
-      downloadedAt: Date | null
-      /** `null` si SGP4 no puede calcular la posición a esa hora. */
-      state: SatelliteState | null
-      /** Vuelta actual; solo se calcula con la ISS seleccionada. */
-      orbit: Revolution | null
+      /** Todos los satélites, ordenados por categoría y nombre. */
+      catalog: CatalogEntry[]
+      /** Cuándo se descargaron de CelesTrak. */
+      downloadedAt: Date
     }
+
+export interface SelectedInfo {
+  id: SatelliteId
+  name: string
+  designator: string
+  category: string
+  /** Periodo, altitudes y tipo de órbita, de los elementos orbitales. */
+  shape: OrbitDescription
+  /** Época de los elementos orbitales. */
+  epoch: Date
+  downloadedAt: Date
+  /** `null` si SGP4 no puede calcular la posición a esa hora. */
+  state: SatelliteState | null
+  /** Vuelta actual; `null` solo si SGP4 no puede calcular el satélite a esa hora. */
+  orbit: Revolution | null
+}
 
 interface Satellites {
   object: Group
-  issStatus: Store<IssStatus>
-  /** Posición de la ISS en la escena (radios terrestres), o `null` si aún no hay. */
-  issPosition(): Vector3 | null
-  /** Dirección unitaria perpendicular al plano de la órbita (posición × velocidad), o `null`. */
-  issOrbitNormal(): Vector3 | null
-  setSelected(selected: boolean): void
+  data: Store<DataStatus>
+  /** El satélite seleccionado con su posición actual, o `null` si no hay ninguno. */
+  selected: Store<SelectedInfo | null>
+  select(id: SatelliteId | null): void
+  /** Atenúa en el globo los que no están en `ids`; `null` los muestra todos. */
+  setHighlight(ids: ReadonlySet<number> | null): void
+  /** El satélite visible más cercano al puntero (píxeles CSS dentro del lienzo), o `null`. */
+  pick(camera: PerspectiveCamera, width: number, height: number, x: number, y: number): SatelliteId | null
+  /** Nombre de un satélite del catálogo, o `null` si no existe. */
+  nameOf(id: SatelliteId): string | null
+  /** Los grupos de `ids` (categorías) no se dibujan en el globo. */
+  setHiddenCategories(ids: ReadonlySet<string>): void
+  /** Radio de la órbita del seleccionado en su punto más alto, en radios terrestres desde el centro, o `null`. */
+  selectedOrbitRadius(): number | null
+  /** Posición del seleccionado en la escena (radios terrestres), o `null`. */
+  selectedPosition(): Vector3 | null
+  /** Dirección unitaria perpendicular al plano de la órbita del seleccionado (posición × velocidad), o `null`. */
+  selectedOrbitNormal(): Vector3 | null
   /** `swarm: false` omite el enjambre (miles de órbitas) y deja sus posiciones como estaban. */
   update(date: Date, options?: { swarm?: boolean }): void
   dispose(): void
 }
 
+const EARTH_EQUATORIAL_KM = 6378.137 // las altitudes de los elementos orbitales se cuentan desde el ecuador
 const PUBLISH_INTERVAL_MS = 250 // React no necesita más de 4 actualizaciones por segundo
 
 const fetchJson = async (path: string): Promise<unknown> => {
@@ -52,8 +80,6 @@ const fetchJson = async (path: string): Promise<unknown> => {
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   return response.json()
 }
-
-const ISS_GROUP = 'stations'
 
 /** Descarga los ficheros que lista el manifiesto (`npm run data`) y los valida. */
 async function loadGroups(): Promise<{ generatedAt: Date; groups: Array<{ name: string; records: OmmRecord[] }> }> {
@@ -70,67 +96,75 @@ const toRgb = (hex: number): [number, number, number] => {
 }
 
 export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChange: () => void }): Satellites {
-  const points = createSatellitePoints(renderer, 1, {
-    color: SATELLITE_COLOR,
-    ringColor: SELECTION_COLOR,
-    sizePx: SATELLITE_SIZE_PX,
-  })
+  const marker = createSatellitePoints(renderer, 1, { color: SATELLITE_COLOR, ringColor: SELECTION_COLOR, sizePx: SATELLITE_SIZE_PX })
   const orbitLine = createOrbitLine(SATELLITE_COLOR)
+  const object = new Group().add(marker.object, orbitLine.object)
+  const data = createStore<DataStatus>({ kind: 'loading' })
+  const selected = createStore<SelectedInfo | null>(null)
+
   let swarm: Swarm | undefined
   let swarmPoints: ReturnType<typeof createSwarmPoints> | undefined
-  const object = new Group().add(points.object, orbitLine.object)
-  const issStatus = createStore<IssStatus>({ kind: 'loading' })
+  let frame: SwarmFrame | undefined
+  let catalog: CatalogEntry[] = []
+  const records = new Map<SatelliteId, OmmRecord>()
+  const names = new Map<SatelliteId, string>()
+  let downloadedAt = new Date(0)
 
+  let selectedId: SatelliteId | null = null
   let tracked: Tracked | undefined
-  let downloadedAt: Date | null = null
   let state: SatelliteState | null = null
-  let selected = false
   let orbit: Revolution | undefined
   let lastPublish = -Infinity
   let timer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
 
-  const readyStatus = (current: Tracked): IssStatus => ({
-    kind: 'ready',
-    name: current.record.OBJECT_NAME,
-    noradId: current.record.NORAD_CAT_ID,
-    designator: current.record.OBJECT_ID,
-    epoch: epochDate(current.record),
-    downloadedAt,
-    state,
-    orbit: orbit ?? null,
-  })
+  const info = (current: Tracked): SelectedInfo => {
+    const entry = catalog.find((e) => e.id === selectedId)
+    return {
+      id: current.record.NORAD_CAT_ID,
+      name: entry?.name ?? current.record.OBJECT_NAME,
+      designator: current.record.OBJECT_ID,
+      category: entry?.category ?? '',
+      shape: describeOrbit(current.record),
+      epoch: epochDate(current.record),
+      downloadedAt,
+      state,
+      orbit: orbit ?? null,
+    }
+  }
 
   const publish = () => {
     timer = undefined
     lastPublish = performance.now()
-    if (tracked) issStatus.set(readyStatus(tracked))
+    if (tracked) selected.set(info(tracked))
   }
 
   loadGroups()
     .then(({ generatedAt, groups }) => {
       if (disposed) return
-      tracked = createTracked(findIss(groups.find((g) => g.name === ISS_GROUP)?.records ?? []))
       downloadedAt = generatedAt
-      const others = groups.filter((g) => g.name !== ISS_GROUP)
-      swarm = createSwarm(others.map((g) => ({ records: g.records, rgb: toRgb(SWARM_COLORS[g.name] ?? SWARM_FALLBACK_COLOR) })))
-      swarmPoints = createSwarmPoints(renderer, others.reduce((n, g) => n + g.records.length, 0), SWARM_SIZE_PX)
+      catalog = buildCatalog(groups)
+      for (const entry of catalog) names.set(entry.id, entry.name)
+      for (const { records: list } of groups) for (const record of list) if (!records.has(record.NORAD_CAT_ID)) records.set(record.NORAD_CAT_ID, record)
+      swarm = createSwarm(
+        groups.map((g) => {
+          const { color, opacity } = getCategory(g.name)
+          return { id: g.name, records: g.records, rgb: toRgb(color), opacity }
+        }),
+      )
+      swarmPoints = createSwarmPoints(renderer, records.size, SWARM_SIZE_PX)
       object.add(swarmPoints.object)
-      issStatus.set(readyStatus(tracked))
+      data.set({ kind: 'ready', catalog, downloadedAt })
       onChange()
     })
     .catch((error: unknown) => {
       if (disposed) return
       console.error('No se pudieron cargar los datos de los satélites', error)
-      issStatus.set({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
+      data.set({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
     })
 
   /** Recalcula la vuelta solo si `date` se sale de la que hay; sin seleccionar, no gasta nada. */
   const updateOrbit = (current: Tracked, date: Date) => {
-    if (!selected) {
-      orbitLine.object.visible = false
-      return
-    }
     if (!orbit || date < orbit.start || date >= orbit.end) {
       orbit = currentRevolution(current, date) ?? undefined
       if (orbit) orbitLine.setPoints(sampleOrbit(current, orbit, ORBIT_POINTS))
@@ -141,26 +175,46 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
 
   return {
     object,
-    issStatus,
-    issPosition: () => (state ? new Vector3(...state.scene) : null),
-    issOrbitNormal: () =>
-      state ? new Vector3(...state.scene).cross(new Vector3(...state.velocity)).normalize() : null,
-    setSelected(value) {
-      selected = value
-      points.setSelected(value)
-      if (!value) orbit = undefined
+    data,
+    selected,
+    select(id) {
+      const record = id === null ? undefined : records.get(id)
+      selectedId = record ? id : null
+      tracked = record && createTracked(record)
+      state = null
+      orbit = undefined
+      marker.setSelected(tracked !== undefined)
+      if (tracked) {
+        publish()
+      } else {
+        marker.setPositions([], 0)
+        orbitLine.object.visible = false
+        selected.set(null)
+      }
     },
+    setHighlight: (ids) => swarm?.setHighlight(ids),
+    nameOf: (id) => names.get(id) ?? null,
+    setHiddenCategories: (ids) => swarm?.setHidden(ids),
+    selectedOrbitRadius: () => (tracked ? (describeOrbit(tracked.record).apogeeKm + EARTH_EQUATORIAL_KM) / EARTH_RADIUS_KM : null),
+    pick(camera, width, height, x, y) {
+      if (!frame) return null
+      const index = pickNearest(frame.positions, frame.count, camera, width, height, x, y, SWARM_HIT_RADIUS_PX)
+      return index === -1 ? null : frame.ids[index]!
+    },
+    selectedPosition: () => (state ? new Vector3(...state.scene) : null),
+    selectedOrbitNormal: () =>
+      state ? new Vector3(...state.scene).cross(new Vector3(...state.velocity)).normalize() : null,
     update(date, { swarm: updateSwarm = true } = {}) {
+      if (updateSwarm && swarm && swarmPoints) {
+        frame = swarm.update(date)
+        swarmPoints.setFrame(frame.positions, frame.colors, frame.count)
+      }
       if (!tracked) return
       state = stateAt(tracked, date)
       if (state) {
-        points.setPositions(state.scene, 1)
-        points.setSunlight(state.sunlight)
-      } else points.setPositions([], 0)
-      if (updateSwarm && swarm && swarmPoints) {
-        const frame = swarm.update(date)
-        swarmPoints.setFrame(frame.positions, frame.colors, frame.count)
-      }
+        marker.setPositions(state.scene, 1)
+        marker.setSunlight(state.sunlight)
+      } else marker.setPositions([], 0)
       updateOrbit(tracked, date)
       const wait = PUBLISH_INTERVAL_MS - (performance.now() - lastPublish)
       if (wait <= 0) publish()

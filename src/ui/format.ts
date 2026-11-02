@@ -1,3 +1,5 @@
+import type { Regime } from '../satellites/orbitInfo'
+
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
@@ -30,16 +32,18 @@ export const formatLongitude = (deg: number): string => `${decimal(Math.abs(deg)
 
 export const formatDecimal = decimal
 
-/** Estado del reloj respecto a la hora real del equipo: "Tiempo real", "Adelantada 2 h 10 min"... */
-export function describeTimeOffset(simMs: number, realMs: number): string {
-  const diff = simMs - realMs
-  if (Math.abs(diff) < 2000) return 'Tiempo real'
-  return `${diff > 0 ? 'Adelantada' : 'Atrasada'} ${formatSpan(diff)}`
-}
-
 /** Estado de iluminación de un satélite según la fracción de disco solar que le llega (1 = al sol, 0 = sombra). */
 export function describeSunlight(sunlight: number): string {
   if (sunlight >= 0.999) return 'A la luz del Sol'
   if (sunlight <= 0.001) return 'En la sombra de la Tierra'
   return `En penumbra (${Math.round(sunlight * 100)} % de luz)`
 }
+
+const REGIME_LABEL: Record<Regime, string> = {
+  low: 'órbita baja',
+  medium: 'órbita media',
+  geosynchronous: 'órbita geosíncrona',
+  elliptical: 'órbita elíptica',
+  high: 'órbita alta',
+}
+export const describeRegime = (regime: Regime): string => REGIME_LABEL[regime]

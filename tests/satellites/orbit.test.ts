@@ -36,6 +36,37 @@ describe('currentRevolution', () => {
   })
 })
 
+describe('currentRevolution en órbitas sin cruce del ecuador o de más de 150 min', () => {
+  const base = issRecord()
+  const geo = createTracked({ ...base, MEAN_MOTION: 1.0027, ECCENTRICITY: 0.0002, INCLINATION: 0.05 })
+  const gps = createTracked({ ...base, MEAN_MOTION: 2.0056, ECCENTRICITY: 0.001, INCLINATION: 55 })
+  const when = new Date(epochDate(base).getTime() + 5 * 3_600_000)
+
+  it.each([
+    ['geoestacionaria', geo, 1436],
+    ['GPS', gps, 718],
+  ])('%s: da una vuelta de un periodo que contiene la hora pedida', (_nombre, tracked, minutes) => {
+    const r = currentRevolution(tracked, when)!
+    expect(r).not.toBeNull()
+    expect((r.end.getTime() - r.start.getTime()) / 60_000).toBeCloseTo(minutes, 0)
+    expect(r.start.getTime()).toBeLessThanOrEqual(when.getTime())
+    expect(r.end.getTime()).toBeGreaterThan(when.getTime())
+  })
+
+  it('la vuelta es la misma para cualquier instante de ella y la siguiente empieza donde acaba', () => {
+    const r = currentRevolution(geo, when)!
+    const inside = new Date((r.start.getTime() + r.end.getTime()) / 2)
+    expect(currentRevolution(geo, inside)!.start.getTime()).toBe(r.start.getTime())
+    expect(currentRevolution(geo, r.end)!.start.getTime()).toBe(r.end.getTime())
+  })
+
+  it('la órbita geoestacionaria dibujada está a unos 6,6 radios del centro, en todos sus puntos', () => {
+    const r = currentRevolution(geo, when)!
+    const points = sampleOrbit(geo, r, 100)
+    for (let i = 0; i < 100; i++) expect(Math.hypot(points[i * 3]!, points[i * 3 + 1]!, points[i * 3 + 2]!)).toBeCloseTo(6.62, 1)
+  })
+})
+
 describe('sampleOrbit', () => {
   const pointCount = 600
   const points = sampleOrbit(iss, rev, pointCount)

@@ -2,28 +2,29 @@ import { BufferAttribute, BufferGeometry, DynamicDrawUsage, Points, ShaderMateri
 
 const VERTEX = /* glsl */ `
   uniform float uSize;
-  attribute vec3 color;
-  varying vec3 vColor;
+  attribute vec4 color;
+  varying vec4 vColor;
   void main() {
     vColor = color;
-    gl_PointSize = uSize;
+    // opacidad > 1: punto enfatizado (coincide con la búsqueda), más grande
+    gl_PointSize = uSize * (1.0 + step(1.5, color.a) * 1.5);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `
 
 const FRAGMENT = /* glsl */ `
-  varying vec3 vColor;
+  varying vec4 vColor;
   void main() {
     float d = length(gl_PointCoord - 0.5);
     if (d > 0.5) discard;
-    gl_FragColor = vec4(vColor, smoothstep(0.5, 0.2, d));
+    gl_FragColor = vec4(vColor.rgb, smoothstep(0.5, 0.2, d) * min(vColor.a, 1.0));
     #include <colorspace_fragment>
   }
 `
 
 interface SwarmPoints {
   object: Points
-  /** Copia las `count` primeras posiciones y colores (tripletas) y dibuja solo esos puntos. */
+  /** Copia las `count` primeras posiciones (tripletas) y colores con opacidad (cuartetos) y dibuja solo esos puntos. */
   setFrame(positions: ArrayLike<number>, colors: ArrayLike<number>, count: number): void
 }
 
@@ -31,7 +32,7 @@ interface SwarmPoints {
 export function createSwarmPoints(renderer: WebGLRenderer, capacity: number, sizePx: number): SwarmPoints {
   const geometry = new BufferGeometry()
   const position = new BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(DynamicDrawUsage)
-  const color = new BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(DynamicDrawUsage)
+  const color = new BufferAttribute(new Float32Array(capacity * 4), 4).setUsage(DynamicDrawUsage)
   geometry.setAttribute('position', position)
   geometry.setAttribute('color', color)
   geometry.setDrawRange(0, 0)
@@ -49,10 +50,8 @@ export function createSwarmPoints(renderer: WebGLRenderer, capacity: number, siz
   return {
     object,
     setFrame(positions, colors, count) {
-      for (let i = 0; i < count * 3; i++) {
-        position.array[i] = positions[i]!
-        color.array[i] = colors[i]!
-      }
+      for (let i = 0; i < count * 3; i++) position.array[i] = positions[i]!
+      for (let i = 0; i < count * 4; i++) color.array[i] = colors[i]!
       position.needsUpdate = true
       color.needsUpdate = true
       geometry.setDrawRange(0, count)

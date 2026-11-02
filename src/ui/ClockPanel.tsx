@@ -57,7 +57,7 @@ export function ClockPanel({ clock }: { clock: Clock }) {
         <button type="button" onClick={() => go(1)} aria-label="Avanzar más rápido" title="Avanzar más rápido">
           <ForwardIcon />
         </button>
-        <button type="button" onClick={() => clock.resetToNow()} disabled={state.live}>
+        <button type="button" className="outline" onClick={() => clock.resetToNow()} disabled={state.live}>
           Ahora
         </button>
       </div>

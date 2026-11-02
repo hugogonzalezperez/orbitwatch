@@ -2,15 +2,26 @@
   "name": "orbitwatch",
   "private": true,
   "version": "0.1.0",
+  "description": "Visualizador 3D de satélites en órbita en el navegador (three.js, React, Vite)",
+  "author": "Hugo Gonzalez",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hugogonzalezperez/orbitwatch.git"
+  },
+  "homepage": "https://github.com/hugogonzalezperez/orbitwatch#readme",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "data": "tsx scripts/update-data.ts"
+    "data": "tsx scripts/update-data.ts",
+    "bench": "tsx scripts/bench.ts"
   },
   "dependencies": {
+    "@fontsource-variable/source-serif-4": "^5.3.1",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "satellite.js": "^7.1.0",

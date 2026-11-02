@@ -27,11 +27,25 @@ function refineCrossing(tracked: Tracked, before: number, after: number): number
   return after
 }
 
+/** Vuelta de un periodo contada desde la época: para las órbitas sin cruce ecuatorial que buscar (casi ecuatoriales) o más largas que el rastreo. */
+function periodRevolution({ record }: Tracked, date: Date): Revolution {
+  const periodMs = Math.round((1440 / Number(record.MEAN_MOTION)) * 60_000) // en milisegundos enteros, para que los límites de cada vuelta sean fechas exactas
+  const epochMs = Date.parse(`${record.EPOCH}Z`)
+  const start = epochMs + Math.floor((date.getTime() - epochMs) / periodMs) * periodMs
+  return { start: new Date(start), end: new Date(start + periodMs) }
+}
+
 /**
- * La vuelta que contiene `date`, de un cruce ascendente del ecuador al siguiente. Es `null` si SGP4 falla o la órbita
- * no cruza el ecuador (por ejemplo, una órbita ecuatorial).
+ * La vuelta que contiene `date`: de un cruce ascendente del ecuador al siguiente. Si no se encuentra (órbita casi
+ * ecuatorial, como la geoestacionaria, o de más de 150 min, como las de GPS), es una vuelta de un periodo desde la época.
+ * Es `null` solo si SGP4 no puede calcular el satélite a esa hora.
  */
 export function currentRevolution(tracked: Tracked, date: Date): Revolution | null {
+  if (north(tracked, date.getTime()) === null) return null
+  return ascendingCrossingRevolution(tracked, date) ?? periodRevolution(tracked, date)
+}
+
+function ascendingCrossingRevolution(tracked: Tracked, date: Date): Revolution | null {
   let current = date.getTime()
   let currentZ = north(tracked, current)
   if (currentZ === null) return null
