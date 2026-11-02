@@ -1,17 +1,19 @@
 import { AdditiveBlending, MathUtils, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three'
-import { SKY_RADIUS, sunDirectionScene } from '../shared/sun'
+import { sunDirectionScene } from '../shared/sun'
 
 const SUN_ANGULAR_RADIUS = 0.2665 * MathUtils.DEG2RAD // el Sol mide 0,53° de diámetro visto desde la Tierra
 const GLOW_FACTOR = 9 // el resplandor se extiende nueve veces el radio del disco
 
-// Cartel hacia la cámara hecho en el shader: el plano se desplaza en el espacio de la vista, así que siempre mira de
-// frente sin tocar matrices. Girar el objeto en onBeforeRender dejaba un fotograma de retraso con el render bajo demanda.
+// El Sol está en el infinito, como las estrellas: la vista solo aporta su rotación (la dirección real se ve igual desde
+// cualquier punto de la órbita de la cámara), la profundidad se fuerza al fondo (xyww) y la Tierra lo tapa. El plano
+// se orienta a la cámara en el propio shader, sumando su tamaño en el espacio de la vista; no usa matrices del objeto.
 const VERTEX = /* glsl */ `
+  uniform vec3 uDirection;
   varying vec2 vUv;
   void main() {
     vUv = uv;
-    vec4 center = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-    gl_Position = projectionMatrix * (center + vec4(position.xy, 0.0, 0.0));
+    vec3 center = mat3(viewMatrix) * uDirection;
+    gl_Position = (projectionMatrix * vec4(center + vec3(position.xy, 0.0), 1.0)).xyww;
   }
 `
 
@@ -35,23 +37,21 @@ interface SunDisc {
   update(date: Date): void
 }
 
-/** El Sol: un disco del tamaño angular real, en la dirección real, dibujado en el cielo y tapado por la Tierra. */
+/** El Sol: un disco del tamaño angular real, en la dirección real y a distancia infinita. */
 export function createSunDisc(): SunDisc {
-  const coreRadius = SKY_RADIUS * Math.tan(SUN_ANGULAR_RADIUS)
-  const size = coreRadius * GLOW_FACTOR * 2
+  const direction = new Vector3()
+  // Con el plano a una unidad de la cámara en el espacio de la vista, su semilado es la tangente del radio angular.
+  const half = Math.tan(SUN_ANGULAR_RADIUS) * GLOW_FACTOR
   const material = new ShaderMaterial({
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,
-    uniforms: { uCore: { value: 1 / GLOW_FACTOR } },
+    uniforms: { uCore: { value: 1 / GLOW_FACTOR }, uDirection: { value: direction } },
     transparent: true,
     blending: AdditiveBlending,
     depthWrite: false, // pero sí depthTest: si la Tierra está delante, lo tapa
   })
-  const object = new Mesh(new PlaneGeometry(size, size), material)
+  const object = new Mesh(new PlaneGeometry(half * 2, half * 2), material)
   object.frustumCulled = false
-  const direction = new Vector3()
-  return {
-    object,
-    update: (date) => void object.position.copy(direction.set(...sunDirectionScene(date))).multiplyScalar(SKY_RADIUS),
-  }
+  object.renderOrder = -1 // después de las estrellas
+  return { object, update: (date) => void direction.set(...sunDirectionScene(date)) }
 }

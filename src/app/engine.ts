@@ -29,7 +29,7 @@ const CLICK_MOVE_TOLERANCE_PX = 5 // más que eso es un arrastre para girar, no 
 /** Monta el globo en `container`. Con `startTime` el reloj arranca en esa hora y en pausa. */
 export function createEngine(container: HTMLElement, { startTime }: { startTime?: Date } = {}): Engine {
   const renderer = createRenderer()
-  const scene = createSpace()
+  const scene = createSpace(renderer.getPixelRatio())
   const camera = createCamera()
   const controls = createControls(camera, renderer.domElement)
   const clock = createClock({ start: startTime, paused: startTime !== undefined })

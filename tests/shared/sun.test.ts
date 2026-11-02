@@ -1,6 +1,6 @@
 import { gstime } from 'satellite.js'
 import { describe, expect, it } from 'vitest'
-import { SKY_RADIUS, sunDirectionScene } from '../../src/shared/sun'
+import { sunDirectionScene } from '../../src/shared/sun'
 
 const DEG = Math.PI / 180
 
@@ -47,7 +47,4 @@ describe('sunDirectionScene', () => {
     expect(lon).toBeCloseTo(-4.11, 1)
   })
 
-  it('el cielo queda más allá de la Tierra y de la distancia máxima de la cámara', () => {
-    expect(SKY_RADIUS).toBeGreaterThan(20)
-  })
 })
