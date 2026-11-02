@@ -42,13 +42,22 @@ Sacar el cálculo de los satélites del hilo principal y poder medir en cualquie
 
 ## Fase D: más datos
 
-- [ ] **D1.** Más grupos de CelesTrak, organizados por función (navegación, comunicaciones, observación, ciencia, radioaficionados, militares, CubeSats) y los grupos de restos de colisiones.
-- [ ] **D2.** SATCAT (propietario, tipo, fecha de lanzamiento): separar restos de cargas útiles, filtrar por país.
-- [ ] **D3.** Formato de datos por columnas, con hash en el nombre y caché.
-- [ ] **D4.** Densidad visual: restos ocultos por defecto, puntos que se atenúan según el zoom.
-- [ ] **D5.** Colores por régimen orbital.
+**Diseño.** Hoy cada grupo de CelesTrak es una categoría y el navegador descarga un fichero por grupo. Pasa a:
 
-**Criterio:** el catálogo completo carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo.
+- **Categorías por función**, no por grupo de CelesTrak: estaciones y naves, meteorología, navegación, Starlink, otras constelaciones de comunicaciones, observación de la Tierra, ciencia, militares, geoestacionarios, radioaficionados, CubeSats, otros activos y restos. Un objeto que está en varios grupos recibe la primera categoría de esa lista (el orden es la prioridad).
+- **Un solo fichero de catálogo por columnas** (`catalog.<hash>.json`, un array por campo), con la categoría ya asignada. El script de datos descarga los grupos, deduplica por número de catálogo, clasifica y escribe ese fichero y el manifiesto. El navegador no clasifica ni valida semánticamente: lo hizo el script.
+- **Los números van al Worker como arrays tipados transferidos**, sin copiar y sin crear 17 000 objetos en el hilo principal; solo el satélite elegido se reconstruye como registro.
+- **Los restos van ocultos por defecto** (su casilla de la leyenda parte desmarcada).
+- **La política de CelesTrak se protege con una caché local**: el script no vuelve a descargar un grupo que se bajó hace menos de 2 h, y espera un segundo entre grupos.
+
+- [ ] **D1. Más grupos y categorías por función** (`categories.ts` con sus grupos y prioridad; `assembleCatalog` puro y con tests).
+- [ ] **D2. Formato por columnas** con hash en el nombre (`columns.ts`, manifiesto v3, carga en el navegador, Worker con arrays tipados).
+- [ ] **D3. Caché local y pausa entre grupos** en el script de datos.
+- [ ] **D4. Restos ocultos por defecto** y colores por categoría comprobados (contraste de las marcas de la leyenda).
+- [ ] **D5. SATCAT:** propietario, tipo y fecha de lanzamiento; separar restos y filtrar por país. Antes hay que comprobar su tamaño y política en CelesTrak.
+- [ ] **D6. Colores por régimen orbital** (opción de coloreado).
+
+**Criterio:** el catálogo ampliado (≈ 17 000 a 22 000 objetos) carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo: medido con `?perf` y `npm run bench`.
 
 ## Fase E: diseño y experiencia de uso
 
