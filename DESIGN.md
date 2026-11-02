@@ -21,8 +21,8 @@ Una herramienta de observación: espacio negro, la Tierra como único objeto gra
 - **Espacio** (#000000): fondo de toda la pantalla.
 - **Tierra, azul mate** (#1d4e89): color provisional de la esfera hasta que haya texturas.
 - **Rejilla** (blanco al 18 % de opacidad): paralelos y meridianos cada 15°, solo para percibir giro y volumen.
-- **Datos, ámbar** (#ffc857): el color de los satélites, la única luz intensa. También el aviso de elementos algo antiguos.
-- **Acento, azul de la Tierra aclarado** (#6aa6e8): foco de teclado y estado del reloj. Rojo (#ff7b72) solo para datos poco fiables o errores.
+- **Datos, ámbar** (#ffc857): el color de los satélites y de su órbita (continua lo recorrido, discontinua lo que falta), la única luz intensa. También el aviso de elementos algo antiguos.
+- **Acento, azul de la Tierra aclarado** (#6aa6e8): foco de teclado, estado del reloj y anillo de selección. Rojo (#ff7b72) solo para datos poco fiables o errores.
 - **Panel** (#0b0f14, texto #e8e8e8 y #a3a7ad, borde de controles #6b7280): contrastes comprobados con la fórmula WCAG 2 (texto ≥ 7,5:1, bordes ≈ 4:1).
 - Colores por régimen orbital (LEO, MEO, GEO, elíptica) y estados de frescura (normal, aviso, desactualizado): `[to be resolved during implementation]`.
 
@@ -34,11 +34,11 @@ Sans-serif del sistema para texto de interfaz; cifras tabulares en la hora y las
 
 ## Layout
 
-El globo ocupa toda la ventana y queda centrado; sin desplazamiento lateral (pan). El panel de reloj y de la ISS flota abajo, centrado, en dos columnas en pantallas anchas y apilado en estrechas; los paneles futuros irán por los bordes. Todavía no se puede ocultar. Móvil y escritorio comparten el mismo lienzo.
+El globo ocupa toda la ventana y queda centrado; sin desplazamiento lateral (pan). El reloj flota abajo, centrado. El panel de la ISS sale por la derecha al pulsar sobre ella y se cierra con la cruz, `Esc` o pulsando en el vacío; cerrado, una pestaña «ISS» arriba a la derecha lo reabre. En pantallas estrechas es una hoja inferior que sustituye al reloj. Móvil y escritorio comparten el mismo lienzo.
 
 ## Elevation & Depth
 
-Plano. La profundidad la dan la iluminación de la esfera (luz direccional con zona oscura) y, más adelante, la atmósfera. Sin sombras de interfaz.
+Plano. La profundidad la dan la iluminación de la esfera (la luz del Sol real, con su zona oscura) y, más adelante, la atmósfera. Sin sombras de interfaz.
 
 ## Shapes
 

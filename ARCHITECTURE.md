@@ -45,6 +45,10 @@ Navegador: fetch manifest → fetch grupos → Web Worker
 - **Reloj (`app/clock.ts`):** hora simulada = hora real × velocidad, con velocidades negativas, pausa, salto y `resetToNow()` (vuelve a la hora del equipo, a 1x y sin pausa). Cambiar de velocidad no da saltos. `?t=2026-03-20T14:46:00Z` arranca en esa hora y en pausa (verificación y demostraciones).
 - **Cuándo se dibuja:** a 1x o en pausa, una vez por segundo o nunca; por encima de 1x, en cada fotograma. El reloj avisa de cambios de estado, no del paso del tiempo.
 - **Lo que ya se ve:** solo la ISS, de una instantánea de `stations` (`scripts/update-stations.sh`), sin Action ni validación completa. La interfaz muestra la distancia entre la hora simulada y la época de los elementos, y avisa de que la precisión baja (a partir de 3 días de distancia aviso, desde 7 poco fiable).
+- **El Sol:** `shared/sun.ts` da la dirección real del Sol (`sunPos` de satellite.js, error ≤ 0,008° frente a astronomy-engine en ocho fechas de 2025 a 2030) en el mismo marco que los satélites. Con ella `globe/lighting.ts` orienta la luz en cada actualización: el terminador y el brillo del mar son los de la hora simulada. `globe/sunDisc.ts` dibuja el disco con su tamaño angular real (0,53°) a `SKY_RADIUS` = 60 radios en esa dirección; la distancia real (≈23 500) no cabe en el rango de profundidad. La Tierra lo tapa si está delante. El relleno ambiente (0,15) es una licencia artística: sin él el lado de noche sería negro puro.
+- **Sombra de la Tierra:** `stateAt` calcula `sunlight` con `shadowFraction` (incluye penumbra): 1 al sol, 0 en la sombra. El panel lo dice con texto y el punto de la ISS se atenúa a la mitad en la sombra.
+- **Selección y panel:** pulsar sobre la ISS (comprobación de pantalla y de oclusión en `scene/picking.ts`) la selecciona; `Engine.selection` es un `Store` que React lee. Con la ISS seleccionada se calcula la vuelta actual (`propagation/orbit.ts`: de un cruce ascendente del ecuador al siguiente) y se dibuja con dos líneas que comparten vértices (`render/orbitLine.ts`).
+- **Datos y época:** `public/data/manifest.json` guarda cuándo se descargaron (distinto de la época de los elementos); el panel muestra las dos y avisa cuando envejecen.
 - **Verificado:** la posición calculada coincide a 0,2 km con la API pública wheretheiss.at en el mismo instante (ambas parten de los mismos elementos, así que comprueba las conversiones, no la física de SGP4).
 
 ## Rendimiento
@@ -58,15 +62,16 @@ Pendiente: una sola `THREE.Points` para todos los satélites, SGP4 en Web Worker
 ```
 src/
   app/          engine.ts (compone las piezas y devuelve el Engine), clock.ts, startTime.ts
-  scene/        infraestructura 3D común: config.ts (zoom, cámara, píxeles), renderer, camera, clipPlanes,
+  scene/        infraestructura 3D común: config.ts (zoom, cámara, píxeles), renderer, camera, clipPlanes, picking,
                 controls, space, renderLoop (dibuja solo si algo cambia), viewport (tamaño), disposeScene
   globe/        lo propio de la Tierra: config.ts (radios, caras, texturas), earth, clouds, graticule,
-                lighting, textureSource (carga KTX2), createGlobe (incluye el giro por GMST)
+                lighting (luz del Sol real), sunDisc, textureSource (carga KTX2), createGlobe (giro por GMST)
   satellites/   data/ (stations: lectura y validación mínima de la ISS; freshness: edad de la época),
-                propagation/ (position: SGP4 → escena y geodésicas), render/ (satellitePoints), createSatellites,
+                propagation/ (position: SGP4 → escena y geodésicas; orbit: vuelta actual), render/ (satellitePoints, orbitLine),
+                createSatellites,
                 config; conjunctions/ [pendiente]
-  ui/           React: App, GlobeCanvas (aloja el canvas), ClockPanel, IssPanel, hooks, format, icons
-  shared/       units, geometry, frames (TEME ↔ escena), store (puente motor → React)
+  ui/           React: App, GlobeCanvas (aloja el canvas), ClockPanel (abajo), IssPanel (lateral), hooks, format, icons
+  shared/       units, frames (TEME ↔ escena), sun (dirección del Sol), store (puente motor → React)
 scripts/        build-textures.sh, update-stations.sh; descarga de CelesTrak automatizada [pendiente]
 public/         data/ (instantánea de stations), textures/earth/ (KTX2)
 tests/          espeja src/; datos reales de CelesTrak en tests/fixtures
