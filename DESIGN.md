@@ -12,13 +12,13 @@ description: Un globo azul sobre el vacío; la interfaz se retira y deja el prot
 Una herramienta de observación: espacio negro, la Tierra como único objeto grande y los satélites como luz. La interfaz es mínima y no compite con el globo. La densidad se resuelve con color, atenuación y filtros, no con más elementos.
 
 **Key Characteristics:**
-- Fondo negro liso (`#000000`), sin degradados.
+- Fondo negro (`#000000`) sin degradados, con un campo de estrellas tenues y poco saturadas.
 - La Tierra es el único volumen; todo lo demás es punto, línea o texto pequeño.
 - Rendimiento antes que efectos: nada decorativo que cueste frames.
 
 ## Colors
 
-- **Espacio** (#000000): fondo de toda la pantalla.
+- **Espacio** (#000000): fondo de toda la pantalla, con estrellas blancas apenas azuladas o anaranjadas, siempre más tenues que los datos.
 - **Tierra, azul mate** (#1d4e89): color provisional de la esfera hasta que haya texturas.
 - **Rejilla** (blanco al 18 % de opacidad): paralelos y meridianos cada 15°, solo para percibir giro y volumen.
 - **Datos, ámbar** (#ffc857): el color de los satélites y de su órbita (continua lo recorrido, discontinua lo que falta), la única luz intensa. También el aviso de elementos algo antiguos.
@@ -38,7 +38,7 @@ El globo ocupa toda la ventana y queda centrado; sin desplazamiento lateral (pan
 
 ## Elevation & Depth
 
-Plano. La profundidad la dan la iluminación de la esfera (la luz del Sol real, con su zona oscura) y, más adelante, la atmósfera. Sin sombras de interfaz.
+Plano. La profundidad la dan la iluminación de la esfera (la luz del Sol real, con su zona oscura) y la atmósfera: un velo azul claro sobre el borde del lado iluminado, como en Google Earth. Sin sombras de interfaz.
 
 ## Shapes
 

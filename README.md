@@ -2,7 +2,7 @@
 
 Visualizador 3D de satélites en órbita, en el navegador, con cribado de acercamientos entre objetos. Proyecto de portfolio centrado en rendimiento medido.
 
-**Estado:** Tierra con texturas y nubes, reloj simulado (adelante, atrás, pausa y vuelta a la hora del equipo) y la ISS moviéndose sobre ella. Al pulsar sobre la ISS se abre un panel con su posición, la hora, la edad de los datos y su órbita actual. La luz es la del Sol real a la hora simulada (terminador, brillo del mar y sombra de la Tierra sobre la ISS). Siguientes: atmósfera, catálogo completo de CelesTrak, cribado. Ver [ARCHITECTURE.md](ARCHITECTURE.md).
+**Estado:** Tierra con texturas y nubes, reloj simulado (adelante, atrás, pausa y vuelta a la hora del equipo) y la ISS moviéndose sobre ella. Al pulsar sobre la ISS se abre un panel con su posición, la hora, la edad de los datos y su órbita actual. La luz es la del Sol real a la hora simulada (terminador, brillo del mar y sombra de la Tierra sobre la ISS). Con una atmósfera de velo azul sobre el borde que sigue al Sol, y fondo de estrellas. Siguientes: catálogo completo de CelesTrak, cribado. Ver [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Uso
 
