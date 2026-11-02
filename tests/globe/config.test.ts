@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CLOUD_RADIUS, CLOUD_SEGMENTS, GRATICULE_RADIUS } from '../../src/globe/config'
+import { ATMOSPHERE_RADIUS, CLOUD_RADIUS, CLOUD_SEGMENTS, GRATICULE_RADIUS } from '../../src/globe/config'
 import { EARTH_RADIUS_KM } from '../../src/shared/units'
 
 describe('capas de la esfera', () => {
@@ -14,5 +14,10 @@ describe('capas de la esfera', () => {
     // de los vértices, que sí están en CLOUD_RADIUS.
     const halfDiagonal = Math.hypot(Math.PI / CLOUD_SEGMENTS.width, Math.PI / (2 * CLOUD_SEGMENTS.height))
     expect(CLOUD_RADIUS * Math.cos(halfDiagonal)).toBeGreaterThan(1)
+  })
+
+  it('la atmósfera envuelve las nubes y queda por debajo de las órbitas bajas, para no tapar satélites', () => {
+    expect(ATMOSPHERE_RADIUS).toBeGreaterThan(CLOUD_RADIUS)
+    expect((ATMOSPHERE_RADIUS - 1) * EARTH_RADIUS_KM).toBeLessThan(300) // la ISS orbita a unos 400 km
   })
 })
