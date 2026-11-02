@@ -1,0 +1,122 @@
+# Decisiones de diseño y por qué
+
+Cada decisión indica el motivo, las alternativas que se descartaron y su estado. Los números citados están medidos o verificados en la fuente; lo que no, se dice. Para cómo encajan las piezas, ver [ARCHITECTURE.md](../ARCHITECTURE.md); para las cifras de rendimiento, [RENDIMIENTO.md](RENDIMIENTO.md).
+
+## Alcance
+
+OrbitWatch es un visualizador 3D de satélites en órbita, en el navegador, pensado como proyecto de portfolio: que sea vistoso, rápido y que cada decisión técnica esté medida y explicada.
+
+- **Hecho:** globo con texturas, hora simulada, ~11 250 satélites (ISS y estaciones, meteorología, Starlink), búsqueda, leyenda con filtros, ficha con posición y órbita, Sol real, atmósfera y estrellas.
+- **Pendiente:** cribado de acercamientos entre objetos, propagación en un Web Worker, catálogo completo, descarga automática de los datos, métricas en pantalla, versión móvil.
+- **Fuera de alcance:** cuentas de usuario, base de datos, predicción real de colisiones, propagación en GPU, realidad virtual.
+- **Aviso de honestidad:** con elementos orbitales públicos, la posición tiene errores de kilómetros. El cribado de acercamientos (cuando exista) será un filtro para encontrar candidatos, no una predicción operativa, y la interfaz debe decirlo.
+
+## Datos
+
+### OMM en JSON, no TLE
+**Motivo.** El formato TLE no puede representar números de catálogo por encima de 99 999. Según CelesTrak, los de 5 dígitos se agotaron el 2026-07-11 y los objetos nuevos tienen 6 dígitos y no tienen TLE. OMM (JSON) sí los soporta, y `satellite.js` lo admite directamente con `json2satrec`. Hoy ya hay objetos de 6 dígitos en el catálogo (por ejemplo, SOYUZ-MS 29 es el 100057) y se propagan sin problema.
+**Detalle.** Hay que pedir `FORMAT=json` explícitamente: CSV es el formato por defecto desde el 2026-05-09.
+
+### El navegador nunca habla con CelesTrak
+**Motivo.** CelesTrak actualiza los datos GP cada 2 h, pide descargar una sola vez por actualización, y bloquea en el cortafuegos a quien insiste tras un error. Si cada visitante descargara, un proyecto con muchas visitas se saltaría su política.
+**Cómo.** Un script (`npm run data`, y más adelante una GitHub Action programada) descarga los grupos, los valida y los deja como ficheros estáticos junto a un `manifest.json`. La web solo lee esos ficheros. Así la web funciona sin backend, con caché normal, y no depende de que CelesTrak esté disponible en el momento de la visita.
+**Alternativa descartada.** Space-Track (requiere cuenta y tiene sus propios límites). Solo se consideraría para validar resultados; no se ha comprobado su política.
+Detalle del flujo, la validación y las políticas en [DATOS.md](DATOS.md).
+
+### Validación estricta de cada registro
+Cada objeto se comprueba (campos numéricos, excentricidad en [0, 1), movimiento medio positivo, inclinación en [0°, 180°], época válida) y se descarta si falla. Un grupo se rechaza entero si queda por debajo de un mínimo de objetos o si se descarta más del 5 % (señal de que el formato ha cambiado). **Motivo:** es mejor no actualizar que publicar datos a medias. Una época en el futuro se acepta: hay objetos reales así (2 de 16 847 en `active`).
+
+## La Tierra
+
+### Esfera con texturas y zoom limitado, no teselas
+**Motivo.** Una esfera de 128×64 segmentos con texturas es barata y se ve bien a las distancias que importan para ver satélites. Una textura de 8K da unos 4,9 km por píxel, así que no llega a nivel de calle como Google Earth, pero queda nítida hasta unos 6 400 km de distancia (estimación con campo de visión de 45° y pantalla de 1080 px).
+**Alternativa.** Teselas con niveles de detalle que se cargan al acercarse. Se deja como mejora posible.
+**Límites de zoom.** Cerca ≈ 2 000 km sobre la superficie; lejos ≈ 120 000 km, lo bastante para encuadrar una órbita geoestacionaria entera (a 6,6 radios del centro).
+
+### Texturas de Solar System Scope en KTX2
+**Fuente.** Solar System Scope (CC BY 4.0, permite uso comercial y adaptación con atribución; verificado en su página). La alternativa, NASA Blue Marble, no ofrece una licencia clara en la página de la colección y su política pide citar a NASA y no sugerir aval.
+**Formato.** KTX2 con compresión Basis ETC1S, generado con `scripts/build-textures.sh`. **Motivo:** una textura de 8192×4096 sin comprimir ocupa unos 134 MB en la GPU (un tercio más con mipmaps); en KTX2 se queda comprimida en la GPU. Medido: el mapa de día de 8K pesa 2,6 MB en disco (el JPEG original, 4,5 MB; con UASTC, 13 MB). El brillo del mar y las nubes van a 2K y un solo canal.
+**Carga progresiva.** Primero el día de 2K (≈ 220 kB) para pintar rápido, luego el brillo del mar y por último el de 8K, que lo sustituye. Si una carga falla queda el azul liso y el error en consola.
+**Nubes.** Segunda esfera (radio 1,002 ≈ 13 km) con una textura de un canal como opacidad. Es una foto fija, no el tiempo real. Su malla es de 128×64: con menos caras, el centro de cada cara se hunde bajo la Tierra y salen rombos (lo cubre un test).
+**Pendiente.** Mapa de noche y relieve; la luz ambiente de 0,15 es una licencia artística para que el lado de noche no sea negro puro.
+
+### Atmósfera analítica
+La primera versión daba un anillo fino y duro en el borde del planeta, lejos del velo de Google Earth que se buscaba. La atmósfera actual es un velo azul claro que se funde sobre el borde: una capa de radio 1,03 (≈ 190 km, el doble de la altura visible real, por debajo de la ISS) cuyo brillo es la longitud del camino de la vista dentro de la capa, calculada con la geometría exacta del rayo con las dos esferas. Sigue al Sol (nada en el lado de noche) y no tiene tono crepuscular. **Coste:** cubre todo el disco, así que añade un paso de relleno de pantalla completa; no se ha medido en una GPU real.
+
+### El Sol y las estrellas, en el infinito
+El Sol usa la posición real de `sunPos` de `satellite.js` (error ≤ 0,008° frente a astronomy-engine en ocho fechas de 2025 a 2030). El disco solar y el fondo de estrellas se dibujan «en el infinito»: su shader usa solo la rotación de la vista y fuerza la profundidad al fondo. **Motivo:** sin paralaje al orbitar, sin tamaño en el mundo ni plano lejano que los alcance, y sin el desfase de un fotograma que tendría orientarlos con `onBeforeRender` bajo render a demanda. Las estrellas son aleatorias con semilla y orientadas en el marco inercial, no las de un catálogo; solo la Vía Láctea queda donde está en el cielo real.
+
+## Tiempo y marcos
+
+### Escena inercial: cámara fija, la Tierra gira
+**Motivo.** SGP4 devuelve posiciones en el marco TEME (inercial). Si los satélites se mueven en ese marco y la Tierra gira por su ángulo sidéreo (GMST), no hace falta convertir cada posición a coordenadas terrestres, y la cámara puede estar fija para ver cómo se mueven los satélites alrededor de la Tierra. `temeToScene` hace (x, y, z) → (x, z, −y), con el eje Y hacia arriba. Un test comprueba que la longitud geodésica de la ISS coincide con la de la escena menos el giro de la Tierra. Además, la posición calculada coincide a 0,2 km con la API pública wheretheiss.at en el mismo instante (ambas parten de los mismos elementos, así que comprueba las conversiones, no la física de SGP4).
+
+### Reloj simulado
+Hora simulada = hora real × velocidad, con velocidades negativas, pausa, salto y vuelta a la hora del equipo. `?t=` en la URL arranca en una hora y en pausa (verificaciones y demostraciones). **Motivo:** ver cómo se mueven los satélites, adelante y atrás, siempre pudiendo volver a «ahora».
+
+### Unidad de escena: un radio terrestre
+1 unidad = 6 371 km. **Motivo:** mantiene los números pequeños y la precisión de float32 alta.
+
+## Render y rendimiento
+
+### Renderizar solo cuando algo cambia
+Un globo quieto no gasta GPU. Quien cambie la escena fuera de la cámara llama a `invalidate()`. Medido en Chrome headless: 0 renders en 3 s con el reloj en pausa y 1 por segundo a 1×. A 1× o en pausa la escena se recalcula una vez por segundo o nunca; por encima de 1×, cada fotograma.
+
+### Todos los satélites en una sola llamada de dibujo
+Un único `THREE.Points` con un `ShaderMaterial`; posición, color y opacidad por punto. **Motivo:** miles de objetos individuales saturarían la CPU con llamadas de dibujo.
+
+### Buffers de tamaño fijo
+Three.js no libera el buffer de GPU de un atributo que se sustituye. La geometría que cambia con el tiempo (la órbita, el enjambre) reescribe buffers de tamaño fijo. Se encontró una fuga real con la línea de la órbita y se corrigió así.
+
+### Selección con búsqueda propia, no con un raycaster
+`pickNearest` proyecta cada punto a pantalla y elige el más cercano al puntero dentro de 10 px, ignorando los que tapa la Tierra o quedan detrás de la cámara; sin asignaciones por punto. **Motivo:** lanzar un raycast contra miles de puntos en cada movimiento del ratón es caro. Medido: 0,07 ms de mediana con 11 250 puntos.
+
+### Propagación en el hilo principal, de momento
+Recalcular los ~11 250 satélites cuesta de 10 a 14 ms (medido en Node, ver [RENDIMIENTO.md](RENDIMIENTO.md)). A 1× se hace una vez por segundo; con el reloj acelerado se limita a una vez cada 100 ms. **Pendiente:** pasarlo a un Web Worker con interpolación en el vertex shader, que es lo que haría falta para el catálogo completo (16 847 objetos). No hay cifras fiables publicadas para 30 000 objetos, así que se medirá en equipos reales.
+
+### Qué se calcula con detalle y qué no
+Solo el satélite seleccionado tiene velocidad, altitud, sombra de la Tierra y órbita; el resto del enjambre solo tiene posición, color y opacidad. **Motivo:** el coste de `shadowFraction` y de la conversión geodésica por 11 000 objetos y fotograma no compensa lo que aporta.
+
+### La órbita: una vuelta, con tres casos
+Se dibuja la vuelta que contiene la hora mostrada, de un cruce ascendente del ecuador al siguiente (rastreo cada 30 s y bisección). Para las órbitas que no cruzan el ecuador o tardan más de 150 min (geoestacionarias, GPS), es una vuelta de un periodo contada desde la época. Lo recorrido va en línea continua y lo que falta, discontinua.
+
+### Que se vean todos los satélites
+Con los datos reales, 23 de los 74 satélites meteorológicos son geoestacionarios (a 6,6 radios del centro) y el apogeo máximo es 7,22. Tres consecuencias de diseño: el plano lejano de la cámara llega a `distancia + 12` (con `+ 1`, un satélite lejano por detrás del globo se recortaba); el zoom llega a 19,8 unidades; y al elegir un satélite, la cámara calcula la distancia a la que cabe su órbita contando la perspectiva (el punto más cercano a la cámara es el que más se abre) y se coloca en el lado de la inclinación que deja al satélite en la mitad superior de la pantalla, libre del reloj. La cámara no descuenta que la ficha y la columna tapen parte del lienzo.
+
+## Interfaz
+
+### React solo para los paneles
+El motor 3D es imperativo (`app/engine.ts`) y no pasa por el estado de React; React se suscribe con `useSyncExternalStore` a unos pocos `Store` (datos, seleccionado). Las etiquetas sobre el globo son DOM imperativo, no React, porque se recolocan en cada fotograma.
+
+### Del panel lateral a la ficha
+Una primera versión usaba una columna fija a la derecha dividida en 70 % lista y 30 % información. Resultaba una plantilla de panel de control, con la información clave escondida y en jerga. La versión actual: el globo ocupa toda la ventana; la leyenda y el buscador van a la izquierda; la ficha (qué es, dónde está, cómo es su órbita, cuánto fiarse) aparece a la derecha solo con algo seleccionado. Detalle en [DESIGN.md](../DESIGN.md).
+
+### La leyenda es también el filtro
+Cada categoría muestra su color, su recuento y un interruptor que la oculta en el globo (oculta = punto hueco, no solo más apagado). Se despliega en una lista con ventana virtual: Starlink son 11 156 filas y solo se pintan las visibles.
+
+### Una regla graduada como motivo propio
+La altitud y la vuelta comparten el mismo trazo de instrumento con marcas. La regla de altitud (0 a 40 000 km, escala de raíz cuadrada para que la órbita baja no se pegue a la superficie) marca la ISS, el GPS y la órbita geoestacionaria, y da sentido a «425 km».
+
+### Solo escritorio, por ahora
+Móvil y ventanas estrechas no están resueltos.
+
+## Alojamiento y dominio (decisión abierta)
+
+- **GitHub Pages** exige que el repositorio sea público o de pago (comprobado en los ajustes del repositorio el 2026-11-02). Con repositorio público es gratis, el mismo origen para web y datos (sin CORS) y admite dominio propio con HTTPS.
+- **Cloudflare Pages** se puede usar con el repositorio privado desplegando el resultado construido con `wrangler pages deploy` desde la Action. Plan gratuito: 500 builds al mes, 20 000 ficheros y 25 MiB por fichero (documentación de Cloudflare). Permite controlar cabeceras de caché con un fichero `_headers`.
+- **Datos cada 2 h:** una GitHub Action programada (cron) descarga, construye y despliega, sin hacer commits cada 2 h. Los crons solo corren en la rama por defecto y los de los repositorios públicos se desactivan tras 60 días sin actividad.
+- **Riesgo sin comprobar:** si CelesTrak bloquea las IPs de los ejecutores de GitHub (o de Cloudflare). La política dice que ante cualquier respuesta distinta de 200 se detiene todo.
+
+## Fuentes consultadas
+
+- [CelesTrak: formatos de datos GP](https://celestrak.org/NORAD/documentation/gp-data-formats.php)
+- [CelesTrak: grupos y consultas](https://celestrak.org/NORAD/elements/)
+- [CelesTrak: política de uso](https://celestrak.org/usage-policy.php)
+- [Solar System Scope: texturas](https://www.solarsystemscope.com/textures/)
+- [NASA: colección Blue Marble](https://science.nasa.gov/earth/earth-observatory/collections/blue-marble)
+- [NASA: imágenes y uso](https://www.nasa.gov/nasa-brand-center/images-and-media/)
+- [satellite.js](https://github.com/shashwatak/satellite-js)
+- [Cosmos: propagación en worker y puntos en GPU](https://github.com/Yashkapure06/Cosmos)
+- [Hilo de three.js: rastreador 3D de satélites](https://discourse.threejs.org/t/side-project-a-3d-satellite-tracker/48002)
+- [Límites de Cloudflare Pages](https://developers.cloudflare.com/pages/platform/limits/)
+- [Despliegue directo en Cloudflare Pages](https://developers.cloudflare.com/pages/get-started/direct-upload/)

@@ -2,6 +2,5 @@ node_modules
 dist
 *.log
 .env*
-
 # Datos de CelesTrak: se descargan con `npm run data`
 public/data/
