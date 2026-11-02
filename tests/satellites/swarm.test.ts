@@ -7,7 +7,10 @@ import {
   extrapolationSeconds,
   needsRefresh,
 } from '../../src/satellites/propagation/swarm'
+import type { OrbitInput } from '../../src/satellites/data/columns'
 import { createInlineTransport, type PropagationTransport } from '../../src/satellites/propagation/transport'
+import { encodeColumns } from '../../src/satellites/data/columns'
+import type { OmmRecord } from '../../src/satellites/data/omm'
 import { stationRecords } from '../helpers/fixtures'
 
 const records = stationRecords()
@@ -15,11 +18,29 @@ const t = epochDate(records[0]!).getTime() + 3_600_000
 const RED = [1, 0, 0] as const
 const BLUE = [0, 0, 1] as const
 
+interface TestGroup {
+  id: string
+  records: OmmRecord[]
+  rgb: readonly [number, number, number]
+  opacity?: number
+}
+type Options = NonNullable<Parameters<typeof createSwarm>[2]>
+
+/** Un enjambre con una categoría por grupo, en el orden dado. */
+const build = (groups: TestGroup[], options: Options = {}) => {
+  const columns = encodeColumns(groups.flatMap((g) => g.records.map((record) => ({ record, category: g.id }))))
+  const styles = columns.categories.map((id) => {
+    const group = groups.find((g) => g.id === id)
+    return { id, rgb: group?.rgb ?? ([1, 1, 1] as const), opacity: group?.opacity ?? 1 }
+  })
+  return createSwarm(columns, styles, options)
+}
+
 /** Un enjambre con una muestra ya calculada en `t`. */
-const ready = async (groups: Parameters<typeof createSwarm>[0], options: Parameters<typeof createSwarm>[1] = {}) => {
+const ready = async (groups: TestGroup[], options: Options = {}) => {
   let arrived: () => void = () => {}
   const onSample = new Promise<void>((resolve) => (arrived = resolve))
-  const swarm = createSwarm(groups, { ...options, onSample: () => { options.onSample?.(); arrived() } })
+  const swarm = build(groups, { ...options, onSample: () => { options.onSample?.(); arrived() } })
   swarm.update(t)
   await onSample
   return swarm
@@ -57,7 +78,7 @@ describe('extrapolationSeconds', () => {
 
 describe('createSwarm: huecos', () => {
   it('un hueco por satélite, con su número de catálogo y el color de su grupo', () => {
-    const swarm = createSwarm([
+    const swarm = build([
       { id: 'a', records: records.slice(0, 5), rgb: RED },
       { id: 'b', records: records.slice(5, 20), rgb: BLUE },
     ])
@@ -68,18 +89,8 @@ describe('createSwarm: huecos', () => {
     swarm.dispose()
   })
 
-  it('un objeto en dos grupos solo ocupa un hueco, el del primero', () => {
-    const swarm = createSwarm([
-      { id: 'a', records: [records[0]!], rgb: RED },
-      { id: 'b', records: [records[0]!, records[1]!], rgb: BLUE },
-    ])
-    expect(swarm.size).toBe(2)
-    expect([...swarm.colors.slice(0, 3)]).toEqual(RED)
-    swarm.dispose()
-  })
-
   it('sin objetos, tamaño cero', () => {
-    const swarm = createSwarm([])
+    const swarm = build([])
     expect(swarm.size).toBe(0)
     swarm.dispose()
   })
@@ -107,7 +118,7 @@ describe('createSwarm: muestras', () => {
   it('mientras hay una petición en vuelo no se lanza otra; al llegar, sí si hace falta', async () => {
     let calls = 0
     let release: (() => void) | null = null
-    const createTransport = (list: typeof records): PropagationTransport => {
+    const createTransport = (list: OrbitInput): PropagationTransport => {
       const inline = createInlineTransport(list)
       return {
         async request(ms) {
@@ -118,7 +129,7 @@ describe('createSwarm: muestras', () => {
         dispose() {},
       }
     }
-    const swarm = createSwarm([{ id: 'a', records, rgb: RED }], { createTransport, onSample: () => {} })
+    const swarm = build([{ id: 'a', records, rgb: RED }], { createTransport, onSample: () => {} })
     swarm.update(t)
     swarm.update(t + 1000)
     swarm.update(t + 2000)
@@ -136,11 +147,11 @@ describe('createSwarm: muestras', () => {
   it('un fallo del transporte no rompe el enjambre: se podrá pedir otra muestra después', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     let fail = true
-    const createTransport = (list: typeof records): PropagationTransport => {
+    const createTransport = (list: OrbitInput): PropagationTransport => {
       const inline = createInlineTransport(list)
       return { request: async (ms) => (fail ? Promise.reject(new Error('boom')) : inline.request(ms)), dispose() {} }
     }
-    const swarm = createSwarm([{ id: 'a', records, rgb: RED }], { createTransport, onSample: () => {} })
+    const swarm = build([{ id: 'a', records, rgb: RED }], { createTransport, onSample: () => {} })
     swarm.update(t)
     await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(1))
     expect(swarm.sample()).toBeNull()
@@ -179,7 +190,7 @@ describe('createSwarm: posiciones en cualquier instante', () => {
   })
 
   it('antes de la primera muestra, todo está lejos', () => {
-    const swarm = createSwarm([{ id: 'a', records: records.slice(0, 2), rgb: RED }])
+    const swarm = build([{ id: 'a', records: records.slice(0, 2), rgb: RED }])
     const out = new Float32Array(6)
     swarm.positionsAt(t, out)
     expect([...out].every((v) => v === FAR)).toBe(true)
@@ -191,7 +202,7 @@ describe('createSwarm: color y opacidad por hueco', () => {
   const alphas = (swarm: Awaited<ReturnType<typeof ready>>) => Array.from({ length: swarm.size }, (_, i) => swarm.colors[i * 4 + 3]!)
 
   it('el grupo oculto pasa a opacidad 0 y vuelve; cada cambio sube la versión de los colores', () => {
-    const swarm = createSwarm([
+    const swarm = build([
       { id: 'a', records: records.slice(0, 2), rgb: RED },
       { id: 'b', records: records.slice(2, 4), rgb: BLUE },
     ])
@@ -205,7 +216,7 @@ describe('createSwarm: color y opacidad por hueco', () => {
   })
 
   it('con un resaltado pequeño, los que coinciden se enfatizan (más de 1) y los demás se atenúan', () => {
-    const swarm = createSwarm([{ id: 'a', records: records.slice(0, 3), rgb: RED }])
+    const swarm = build([{ id: 'a', records: records.slice(0, 3), rgb: RED }])
     swarm.setHighlight(new Set([records[1]!.NORAD_CAT_ID]))
     const [first, second, third] = alphas(swarm as never)
     expect(second).toBeGreaterThan(1)
@@ -216,7 +227,7 @@ describe('createSwarm: color y opacidad por hueco', () => {
   })
 
   it('con un resaltado enorme no se enfatiza a nadie', () => {
-    const swarm = createSwarm([{ id: 'a', records: records.slice(0, 3), rgb: RED }])
+    const swarm = build([{ id: 'a', records: records.slice(0, 3), rgb: RED }])
     const many = new Set(Array.from({ length: 600 }, (_, i) => i))
     many.add(records[1]!.NORAD_CAT_ID)
     swarm.setHighlight(many)
@@ -225,7 +236,7 @@ describe('createSwarm: color y opacidad por hueco', () => {
   })
 
   it('quitar el resaltado devuelve a todos a su opacidad base, y la opacidad base del grupo se respeta', () => {
-    const swarm = createSwarm([{ id: 'a', records: records.slice(0, 2), rgb: RED, opacity: 0.5 }])
+    const swarm = build([{ id: 'a', records: records.slice(0, 2), rgb: RED, opacity: 0.5 }])
     expect(alphas(swarm as never)).toEqual([0.5, 0.5])
     swarm.setHighlight(new Set([records[0]!.NORAD_CAT_ID]))
     expect(alphas(swarm as never)[0]).toBeGreaterThan(1)
@@ -235,7 +246,7 @@ describe('createSwarm: color y opacidad por hueco', () => {
   })
 
   it('un grupo oculto no se enfatiza aunque coincida con la búsqueda', () => {
-    const swarm = createSwarm([{ id: 'a', records: records.slice(0, 2), rgb: RED }])
+    const swarm = build([{ id: 'a', records: records.slice(0, 2), rgb: RED }])
     swarm.setHidden(new Set(['a']))
     swarm.setHighlight(new Set([records[0]!.NORAD_CAT_ID]))
     expect(alphas(swarm as never)).toEqual([0, 0])

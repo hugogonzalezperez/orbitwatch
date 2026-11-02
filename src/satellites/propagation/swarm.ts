@@ -1,15 +1,15 @@
-import type { OmmRecord } from '../data/omm'
+import type { CatalogColumns, OrbitInput } from '../data/columns'
+import { toOrbitInput } from '../data/columns'
 import type { Sample } from './batch'
 import { createTransport as createDefaultTransport, type PropagationTransport } from './transport'
 
-export interface SwarmGroup {
-  /** Identificador del grupo (la categoría), para ocultarlo. */
+/** Cómo se dibuja una categoría. El estilo `i` corresponde a la categoría `i` de la tabla de las columnas. */
+export interface SwarmStyle {
   id: string
-  records: OmmRecord[]
-  /** Color del grupo, componentes de 0 a 1. */
+  /** Color de la categoría, componentes de 0 a 1. */
   rgb: readonly [number, number, number]
-  /** Opacidad de sus puntos sin resaltado, de 0 a 1; por defecto 1. Los grupos enormes se apagan para que no tapen al resto. */
-  opacity?: number
+  /** Opacidad de sus puntos sin resaltado, de 0 a 1. Las categorías enormes se apagan para que no tapen al resto. */
+  opacity: number
 }
 
 /** Segundos de tiempo simulado tras los que se pide una muestra nueva: con la velocidad, el error de extrapolar es de unos 0,4 km en órbita baja. */
@@ -53,33 +53,22 @@ export interface Swarm {
   positionsAt(simMs: number, out: Float32Array): void
   /** Atenúa los que no están en `ids`; `null` los devuelve a su opacidad base. */
   setHighlight(ids: ReadonlySet<number> | null): void
-  /** Los grupos de `ids` no se dibujan. */
+  /** Las categorías de `ids` no se dibujan. */
   setHidden(ids: ReadonlySet<string>): void
   dispose(): void
 }
 
 interface Options {
   /** Cómo se calculan los satélites; por defecto, en un Worker si hay. */
-  createTransport?: (records: OmmRecord[]) => PropagationTransport
+  createTransport?: (input: OrbitInput) => PropagationTransport
   /** Se llama cuando llega una muestra nueva. */
   onSample?: () => void
 }
 
 /** Muchos satélites sin estado propio: el cálculo va en un Worker y entre muestras se extrapola con la velocidad. */
-export function createSwarm(groups: SwarmGroup[], { createTransport = createDefaultTransport, onSample }: Options = {}): Swarm {
-  const seen = new Set<number>()
-  const records: OmmRecord[] = []
-  const slotGroup: SwarmGroup[] = []
-  for (const group of groups) {
-    for (const record of group.records) {
-      if (seen.has(record.NORAD_CAT_ID)) continue // un objeto en dos grupos solo cuenta en el primero
-      seen.add(record.NORAD_CAT_ID)
-      records.push(record)
-      slotGroup.push(group)
-    }
-  }
-  const size = records.length
-  const ids = Uint32Array.from(records, (r) => r.NORAD_CAT_ID)
+export function createSwarm(columns: CatalogColumns, styles: SwarmStyle[], { createTransport = createDefaultTransport, onSample }: Options = {}): Swarm {
+  const size = columns.id.length
+  const ids = Uint32Array.from(columns.id)
   const colors = new Float32Array(size * 4)
   const visible = new Uint8Array(size)
   let hidden: ReadonlySet<string> = new Set()
@@ -89,7 +78,7 @@ export function createSwarm(groups: SwarmGroup[], { createTransport = createDefa
   const recolor = () => {
     const emphasize = highlight !== null && highlight.size <= EMPHASIS_MAX
     for (let i = 0; i < size; i++) {
-      const { id, rgb, opacity = 1 } = slotGroup[i]!
+      const { id, rgb, opacity } = styles[columns.category[i]!]!
       const shown = !hidden.has(id)
       visible[i] = shown ? 1 : 0
       colors.set(rgb, i * 4)
@@ -99,7 +88,7 @@ export function createSwarm(groups: SwarmGroup[], { createTransport = createDefa
   }
   recolor()
 
-  const transport = createTransport(records)
+  const transport = createTransport(toOrbitInput(columns))
   let current: Sample | null = null
   let valid = 0
   let inFlight = false

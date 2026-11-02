@@ -27,7 +27,8 @@ Reglas que conviene respetar al tocar el código, y los problemas reales que las
 - El enjambre tiene un hueco fijo por satélite: se oculta con opacidad 0, nunca se compactan los buffers.
 
 **Datos**
-- El navegador nunca llama a CelesTrak. Solo el script de datos, una vez por actualización (cada 2 h) y parando ante cualquier respuesta distinta de 200. Se usa OMM en JSON, no TLE.
+- El navegador nunca llama a CelesTrak. Solo el script de datos, una vez por actualización (cada 2 h, con caché local y una pausa de 1 s entre grupos) y parando ante cualquier respuesta distinta de 200. Se usa OMM en JSON, no TLE.
+- Una categoría nueva se añade en `satellites/categories.ts` (la posición en la lista es su prioridad) y sus grupos se descargan solos; después, `npm run data`. El formato del catálogo o del manifiesto no cambia sin subir `SCHEMA_VERSION` y adaptar `parseManifest`.
 
 **Interfaz**
 - React solo aloja el canvas y los paneles; el motor 3D es imperativo (`src/app/engine.ts`).

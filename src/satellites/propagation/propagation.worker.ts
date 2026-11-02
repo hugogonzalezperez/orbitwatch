@@ -12,7 +12,7 @@ let batch: Batch | null = null
 
 scope.onmessage = ({ data }) => {
   if (data.type === 'init') {
-    batch = createBatch(data.records)
+    batch = createBatch(data.input)
     return
   }
   if (!batch) return

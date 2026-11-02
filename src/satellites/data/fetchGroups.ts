@@ -32,10 +32,16 @@ export const groupUrl = (group: string): string => `https://celestrak.org/NORAD/
  */
 export async function fetchGroups(
   groups: GroupSpec[],
-  { fetchImpl = fetch, userAgent }: { fetchImpl?: typeof fetch; userAgent: string },
+  {
+    fetchImpl = fetch,
+    userAgent,
+    delayMs = 0,
+    sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  }: { fetchImpl?: typeof fetch; userAgent: string; delayMs?: number; sleep?: (ms: number) => Promise<void> },
 ): Promise<GroupData[]> {
   const result: GroupData[] = []
   for (const { name, minObjects } of groups) {
+    if (result.length > 0 && delayMs > 0) await sleep(delayMs) // cortesía con CelesTrak: no se piden seguidos
     let response: Response
     try {
       response = await fetchImpl(groupUrl(name), { headers: { 'User-Agent': userAgent }, redirect: 'error' })

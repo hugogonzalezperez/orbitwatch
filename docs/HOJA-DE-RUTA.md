@@ -50,14 +50,14 @@ Sacar el cálculo de los satélites del hilo principal y poder medir en cualquie
 - **Los restos van ocultos por defecto** (su casilla de la leyenda parte desmarcada).
 - **La política de CelesTrak se protege con una caché local**: el script no vuelve a descargar un grupo que se bajó hace menos de 2 h, y espera un segundo entre grupos.
 
-- [ ] **D1. Más grupos y categorías por función** (`categories.ts` con sus grupos y prioridad; `assembleCatalog` puro y con tests).
-- [ ] **D2. Formato por columnas** con hash en el nombre (`columns.ts`, manifiesto v3, carga en el navegador, Worker con arrays tipados).
-- [ ] **D3. Caché local y pausa entre grupos** en el script de datos.
-- [ ] **D4. Restos ocultos por defecto** y colores por categoría comprobados (contraste de las marcas de la leyenda).
+- [x] **D1. Más grupos y categorías por función**: 20 grupos de CelesTrak, 13 categorías, 19 520 objetos únicos (`categories.ts` con sus grupos y prioridad; `assembleCatalog` puro y con tests).
+- [x] **D2. Formato por columnas** con hash en el nombre (`columns.ts`, manifiesto v3, carga en el navegador con comprobación del hash, Worker con arrays tipados): 2,85 MB y 801 kB comprimido.
+- [x] **D3. Caché local y pausa entre grupos** en el script de datos.
+- [x] **D4. Restos ocultos por defecto** y colores por categoría comprobados (todas las marcas, entre 4,9:1 y 15,1:1 sobre el panel).
 - [ ] **D5. SATCAT:** propietario, tipo y fecha de lanzamiento; separar restos y filtrar por país. Antes hay que comprobar su tamaño y política en CelesTrak.
 - [ ] **D6. Colores por régimen orbital** (opción de coloreado).
 
-**Criterio:** el catálogo ampliado (≈ 17 000 a 22 000 objetos) carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo: medido con `?perf` y `npm run bench`.
+**Criterio:** el catálogo ampliado carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo: medido con `?perf` y `npm run bench`. **Cumplido para D1 a D4:** 19 520 objetos; el hilo principal gasta lo mismo que con 11 250 (5,3 a 5,6 % de JavaScript a ×10); los restos parten ocultos. Quedan D5 (SATCAT) y D6 (colores por régimen).
 
 ## Fase E: diseño y experiencia de uso
 

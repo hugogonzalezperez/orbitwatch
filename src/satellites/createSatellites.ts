@@ -6,8 +6,10 @@ import { buildCatalog, type CatalogEntry } from './catalog'
 import { describeOrbit, type OrbitDescription } from './orbitInfo'
 import { getCategory } from './categories'
 import { ORBIT_POINTS, SATELLITE_COLOR, SATELLITE_SIZE_PX, SELECTION_COLOR, SWARM_HIT_RADIUS_PX, SWARM_SIZE_PX } from './config'
+import { sha256Hex } from '../shared/hash'
+import { parseColumns, recordAt, type CatalogColumns } from './data/columns'
 import { parseManifest } from './data/manifest'
-import { parseOmmList, epochDate, type OmmRecord } from './data/omm'
+import { epochDate } from './data/omm'
 import { currentRevolution, orbitProgress, sampleOrbit, type Revolution } from './propagation/orbit'
 import { createTracked, stateAt, type SatelliteState, type Tracked } from './propagation/position'
 import { sunDirectionScene } from '../shared/sun'
@@ -87,19 +89,22 @@ interface Satellites {
 const EARTH_EQUATORIAL_KM = 6378.137 // las altitudes de los elementos orbitales se cuentan desde el ecuador
 const PUBLISH_INTERVAL_MS = 250 // React no necesita más de 4 actualizaciones por segundo
 
-const fetchJson = async (path: string): Promise<unknown> => {
+const fetchText = async (path: string): Promise<string> => {
   const response = await fetch(`${import.meta.env.BASE_URL}${path}`)
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  return response.json()
+  return response.text()
 }
 
-/** Descarga los ficheros que lista el manifiesto (`npm run data`) y los valida. */
-async function loadGroups(): Promise<{ generatedAt: Date; groups: Array<{ name: string; records: OmmRecord[] }> }> {
-  const { generatedAt, sources } = parseManifest(await fetchJson('data/manifest.json'))
-  const groups = await Promise.all(
-    sources.map(async ({ group, file }) => ({ name: group, records: parseOmmList(await fetchJson(`data/${file}`)).records })),
-  )
-  return { generatedAt, groups }
+/** Descarga el catálogo que indica el manifiesto (`npm run data`), comprueba que llegó entero y lo lee. */
+async function loadCatalog(): Promise<{ generatedAt: Date; columns: CatalogColumns }> {
+  const { generatedAt, catalog } = parseManifest(JSON.parse(await fetchText('data/manifest.json')))
+  const text = await fetchText(`data/${catalog.file}`)
+  if (globalThis.crypto?.subtle) {
+    if ((await sha256Hex(text)) !== catalog.sha256) throw new Error('el catálogo no coincide con su hash: la descarga llegó incompleta o alterada')
+  } else console.warn('Sin Web Crypto (¿página sin https?): no se puede comprobar el hash del catálogo')
+  const columns = parseColumns(JSON.parse(text))
+  if (columns.id.length !== catalog.count) throw new Error(`el catálogo trae ${columns.id.length} objetos y el manifiesto dice ${catalog.count}`)
+  return { generatedAt, columns }
 }
 
 const toRgb = (hex: number): [number, number, number] => {
@@ -123,7 +128,8 @@ export function createSatellites(
   let uploadedColors = -1
   let lastTime = 0 // la última hora simulada con la que se actualizó, para elegir bajo el puntero
   let catalog: CatalogEntry[] = []
-  const records = new Map<SatelliteId, OmmRecord>()
+  let columns: CatalogColumns | undefined
+  const rowOf = new Map<SatelliteId, number>() // número de catálogo → fila de las columnas
   const names = new Map<SatelliteId, string>()
   let downloadedAt = new Date(0)
 
@@ -156,25 +162,24 @@ export function createSatellites(
     if (tracked) selected.set(info(tracked))
   }
 
-  loadGroups()
-    .then(({ generatedAt, groups }) => {
+  loadCatalog()
+    .then(({ generatedAt, columns: loaded }) => {
       if (disposed) return
       downloadedAt = generatedAt
-      catalog = buildCatalog(groups)
+      columns = loaded
+      catalog = buildCatalog(loaded)
       for (const entry of catalog) names.set(entry.id, entry.name)
-      for (const { records: list } of groups) for (const record of list) if (!records.has(record.NORAD_CAT_ID)) records.set(record.NORAD_CAT_ID, record)
-      const created = createSwarm(
-        groups.map((g) => {
-          const { color, opacity } = getCategory(g.name)
-          return { id: g.name, records: g.records, rgb: toRgb(color), opacity }
-        }),
-        {
-          onSample: () => {
-            swarmPoints?.setSample(created.sample()!)
-            onSwarm?.()
-          },
+      loaded.id.forEach((id, row) => rowOf.set(id, row))
+      const styles = loaded.categories.map((id) => {
+        const { color, opacity } = getCategory(id)
+        return { id, rgb: toRgb(color), opacity }
+      })
+      const created = createSwarm(loaded, styles, {
+        onSample: () => {
+          swarmPoints?.setSample(created.sample()!)
+          onSwarm?.()
         },
-      )
+      })
       swarm = created
       swarmPoints = createSwarmPoints(renderer, created.size, SWARM_SIZE_PX)
       pickPositions = new Float32Array(created.size * 3)
@@ -203,7 +208,8 @@ export function createSatellites(
     data,
     selected,
     select(id) {
-      const record = id === null ? undefined : records.get(id)
+      const row = id === null ? undefined : rowOf.get(id)
+      const record = row === undefined || !columns ? undefined : recordAt(columns, row)
       selectedId = record ? id : null
       tracked = record && createTracked(record)
       state = null

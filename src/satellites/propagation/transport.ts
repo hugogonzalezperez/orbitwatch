@@ -1,4 +1,4 @@
-import type { OmmRecord } from '../data/omm'
+import type { OrbitInput } from '../data/columns'
 import { createBatch, createSample, propagateBatch, type Sample } from './batch'
 import type { WorkerRequest, WorkerResponse } from './protocol'
 
@@ -8,11 +8,11 @@ export interface PropagationTransport {
   dispose(): void
 }
 
-export function createInlineTransport(records: OmmRecord[]): PropagationTransport {
-  const batch = createBatch(records)
+export function createInlineTransport(input: OrbitInput): PropagationTransport {
+  const batch = createBatch(input)
   return {
     async request(epochMs) {
-      const sample = createSample(records.length)
+      const sample = createSample(input.count)
       propagateBatch(batch, epochMs, sample)
       return sample
     },
@@ -20,7 +20,7 @@ export function createInlineTransport(records: OmmRecord[]): PropagationTranspor
   }
 }
 
-export function createWorkerTransport(records: OmmRecord[]): PropagationTransport {
+export function createWorkerTransport(input: OrbitInput): PropagationTransport {
   const worker = new Worker(new URL('./propagation.worker.ts', import.meta.url), { type: 'module' })
   let pending: { resolve: (sample: Sample) => void; reject: (error: Error) => void } | null = null
   worker.onmessage = ({ data }: MessageEvent<WorkerResponse>) => {
@@ -32,7 +32,9 @@ export function createWorkerTransport(records: OmmRecord[]): PropagationTranspor
     pending = null
   }
   const send = (message: WorkerRequest) => worker.postMessage(message)
-  send({ type: 'init', records })
+  // Se transfiere una copia: la original queda para el cálculo en el hilo principal si el Worker falla.
+  const copy: OrbitInput = { ...input, ids: input.ids.slice(), elements: input.elements.slice() }
+  worker.postMessage({ type: 'init', input: copy } satisfies WorkerRequest, [copy.ids.buffer, copy.elements.buffer])
   return {
     request: (epochMs) =>
       new Promise((resolve, reject) => {
@@ -44,9 +46,9 @@ export function createWorkerTransport(records: OmmRecord[]): PropagationTranspor
 }
 
 /** Con Worker si el navegador lo permite; si no arranca, el cálculo pasa al hilo principal y la web sigue funcionando. */
-export function createTransport(records: OmmRecord[]): PropagationTransport {
-  if (typeof Worker === 'undefined') return createInlineTransport(records)
-  let active: PropagationTransport = createWorkerTransport(records)
+export function createTransport(input: OrbitInput): PropagationTransport {
+  if (typeof Worker === 'undefined') return createInlineTransport(input)
+  let active: PropagationTransport = createWorkerTransport(input)
   let fellBack = false
   return {
     async request(epochMs) {
@@ -57,7 +59,7 @@ export function createTransport(records: OmmRecord[]): PropagationTransport {
         console.warn('No se pudo usar un Worker; el cálculo pasa al hilo principal', error)
         active.dispose()
         fellBack = true
-        active = createInlineTransport(records)
+        active = createInlineTransport(input)
         return active.request(epochMs)
       }
     },

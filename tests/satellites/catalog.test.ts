@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { getCategory } from '../../src/satellites/categories'
 import { buildCatalog, groupByCategory, normalize, rankResults, searchEntries } from '../../src/satellites/catalog'
+import { encodeColumns } from '../../src/satellites/data/columns'
 import type { OmmRecord } from '../../src/satellites/data/omm'
 import { stationRecords } from '../helpers/fixtures'
 
 const record = (id: number, name: string, designator = '2020-001A'): OmmRecord => ({ ...stationRecords()[0]!, NORAD_CAT_ID: id, OBJECT_NAME: name, OBJECT_ID: designator })
 
-const catalog = buildCatalog([
+/** El catálogo de unas categorías con sus registros. */
+const catalogOf = (groups: Array<{ name: string; records: OmmRecord[] }>) =>
+  buildCatalog(encodeColumns(groups.flatMap((g) => g.records.map((r) => ({ record: r, category: g.name })))))
+
+const catalog = catalogOf([
   { name: 'starlink', records: [record(3, 'STARLINK-1234'), record(1, 'STARLINK-30')] },
   { name: 'weather', records: [record(2, 'NOAA 19'), record(4, 'METEOSAT-9 (MSG-2)')] },
   { name: 'stations', records: [record(25544, 'ISS (ZARYA)', '1998-067A')] },
@@ -30,17 +35,8 @@ describe('buildCatalog', () => {
     expect(catalog.map((e) => e.name)).toEqual(['ISS (ZARYA)', 'METEOSAT-9 (MSG-2)', 'NOAA 19', 'STARLINK-30', 'STARLINK-1234'])
   })
 
-  it('un mismo objeto en dos grupos aparece una sola vez, en el primero', () => {
-    const twice = buildCatalog([
-      { name: 'weather', records: [record(7, 'A')] },
-      { name: 'starlink', records: [record(7, 'A')] },
-    ])
-    expect(twice).toHaveLength(1)
-    expect(twice[0]!.category).toBe('weather')
-  })
-
   it('un nombre vacío se muestra con su número de catálogo', () => {
-    expect(buildCatalog([{ name: 'weather', records: [record(99, '')] }])[0]!.name).toBe('Sin nombre (99)')
+    expect(catalogOf([{ name: 'weather', records: [record(99, '')] }])[0]!.name).toBe('Sin nombre (99)')
   })
 })
 
@@ -89,7 +85,7 @@ describe('groupByCategory', () => {
 })
 
 describe('rankResults', () => {
-  const big = buildCatalog([
+  const big = catalogOf([
     {
       name: 'weather',
       records: [record(10, 'NOAA 19'), record(11, 'GOES 16 (NOAA)'), record(12, 'METOP-B'), record(13, 'FENGYUN 3A'), record(14, 'NOAA 20 (JPSS-1)')],

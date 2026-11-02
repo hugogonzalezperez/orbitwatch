@@ -6,8 +6,8 @@ Cada decisión indica el motivo, las alternativas que se descartaron y su estado
 
 OrbitWatch es un visualizador 3D de satélites en órbita, en el navegador, pensado como proyecto de portfolio: que sea vistoso, rápido y que cada decisión técnica esté medida y explicada.
 
-- **Hecho:** globo con texturas, hora simulada, ~11 250 satélites (ISS y estaciones, meteorología, Starlink), búsqueda, leyenda con filtros, ficha con posición y órbita, Sol real, atmósfera y estrellas.
-- **Pendiente:** cribado de acercamientos entre objetos, catálogo completo, descarga automática de los datos, versión móvil.
+- **Hecho:** globo con texturas, hora simulada, ~19 500 objetos en 13 categorías (ISS y estaciones, meteorología, navegación, Starlink, constelaciones, observación, ciencia, militares, geoestacionarios, radioaficionados, CubeSats, otros y restos), búsqueda, leyenda con filtros, ficha con posición y órbita, Sol real, atmósfera y estrellas.
+- **Pendiente:** cribado de acercamientos entre objetos, país y tipo de cada objeto (SATCAT), descarga automática de los datos, versión móvil.
 - **Fuera de alcance:** cuentas de usuario, base de datos, predicción real de colisiones, propagación en GPU, realidad virtual.
 - **Aviso de honestidad:** con elementos orbitales públicos, la posición tiene errores de kilómetros. El cribado de acercamientos (cuando exista) será un filtro para encontrar candidatos, no una predicción operativa, y la interfaz debe decirlo.
 
@@ -22,6 +22,18 @@ OrbitWatch es un visualizador 3D de satélites en órbita, en el navegador, pens
 **Cómo.** Un script (`npm run data`, y más adelante una GitHub Action programada) descarga los grupos, los valida y los deja como ficheros estáticos junto a un `manifest.json`. La web solo lee esos ficheros. Así la web funciona sin backend, con caché normal, y no depende de que CelesTrak esté disponible en el momento de la visita.
 **Alternativa descartada.** Space-Track (requiere cuenta y tiene sus propios límites). Solo se consideraría para validar resultados; no se ha comprobado su política.
 Detalle del flujo, la validación y las políticas en [DATOS.md](DATOS.md).
+
+### Categorías por función, asignadas al descargar
+**Motivo.** Un grupo de CelesTrak no es lo que busca quien mira el globo: `stations` mezcla estaciones, naves y restos; Starlink está en `starlink` y en `active`. Se definen 13 categorías por función (`categories.ts`); un objeto que está en varios grupos recibe la primera categoría de la lista, así que el orden es la prioridad. El script clasifica al descargar y el navegador solo lee el resultado, de modo que cambiar una clasificación no toca la interfaz.
+**Límite.** Es la clasificación de CelesTrak: los 40 «NAVSTAR» antiguos (GPS) no están en `gnss` y quedan en «Otros activos». Mejorarlo exige SATCAT.
+**Restos de colisiones.** Son 2 672 objetos (los de FENGYUN-1C, IRIDIUM 33 y COSMOS 2251): saturan el globo, así que parten ocultos (`hiddenByDefault`) y se activan desde la leyenda.
+
+### Un solo catálogo por columnas, con el hash en el nombre
+**Motivo.** El navegador descargaba un fichero JSON por grupo, cada uno con las claves repetidas en cada objeto, y creaba un objeto de JavaScript por satélite. Ahora es un único `catalog.<hash>.json` con un array por campo (`columns.ts`): el JSON de `active` ocupa 7,05 MB y el catálogo ampliado (casi 3 000 objetos más) 2,85 MB, 801 kB comprimido. El navegador no crea objetos por satélite: la lista del buscador sale de las columnas y el Worker recibe los números en arrays tipados transferidos (clonar 11 156 registros costaba 15 ms; así no cuesta nada).
+**Hash en el nombre y en el manifiesto.** El nombre del fichero lleva 8 caracteres de su SHA-256, así que ninguna caché puede servir datos viejos con un nombre nuevo; el manifiesto guarda el hash completo y el navegador lo comprueba (una descarga cortada o alterada se rechaza) y comprueba también el número de objetos. Un manifiesto de otra versión del formato se rechaza en vez de leerse mal.
+
+### Caché local de 2 h y pausa entre grupos
+CelesTrak pide una sola descarga por actualización. Con 20 grupos, ejecutar el script dos veces durante el desarrollo sería fácil de hacer sin querer: una caché local (`.cache/celestrak/`) devuelve lo bajado hace menos de 2 h sin tocar la red, y se espera 1 s entre grupos por cortesía. Solo se cachean los 200: ante un error el script sigue parando, sin reintentar.
 
 ### Validación estricta de cada registro
 Cada objeto se comprueba (campos numéricos, excentricidad en [0, 1), movimiento medio positivo, inclinación en [0°, 180°], época válida) y se descarta si falla. Un grupo se rechaza entero si queda por debajo de un mínimo de objetos o si se descarta más del 5 % (señal de que el formato ha cambiado). **Motivo:** es mejor no actualizar que publicar datos a medias. Una época en el futuro se acepta: hay objetos reales así (2 de 16 847 en `active`).

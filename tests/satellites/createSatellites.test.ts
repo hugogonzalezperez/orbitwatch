@@ -1,27 +1,30 @@
 import { PerspectiveCamera, type WebGLRenderer } from 'three'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSatellites, ISS_ID } from '../../src/satellites/createSatellites'
+import { encodeColumns } from '../../src/satellites/data/columns'
+import { catalogFileName } from '../../src/satellites/data/manifest'
 import { epochDate } from '../../src/satellites/data/omm'
-import { issRecord, stationRecords, stationsRaw } from '../helpers/fixtures'
+import { sha256Hex } from '../../src/shared/hash'
+import { issRecord, stationRecords } from '../helpers/fixtures'
 
 const renderer = { getPixelRatio: () => 1 } as unknown as WebGLRenderer
-const raw = stationsRaw as unknown[]
-const FILES: Record<string, unknown> = {
-  'manifest.json': {
-    schemaVersion: 2,
+const entries = stationRecords().map((record, i) => ({ record, category: i < 10 ? 'stations' : 'weather' }))
+const catalogText = JSON.stringify(encodeColumns(entries))
+const sha256 = await sha256Hex(catalogText)
+const catalogFile = catalogFileName(sha256)
+const FILES: Record<string, string> = {
+  'manifest.json': JSON.stringify({
+    schemaVersion: 3,
     generatedAt: '2026-11-02T00:00:00Z',
-    sources: [
-      { group: 'stations', file: 'stations.json', count: 10 },
-      { group: 'weather', file: 'weather.json', count: 10 },
-    ],
-  },
-  'stations.json': raw.slice(0, 10),
-  'weather.json': raw.slice(10),
+    catalog: { file: catalogFile, count: 20, sha256 },
+    groups: [{ group: 'stations', count: 10 }, { group: 'weather', count: 10 }],
+  }),
+  [catalogFile]: catalogText,
 }
-const serve = (files: Record<string, unknown>) =>
+const serve = (files: Record<string, string>) =>
   vi.stubGlobal('fetch', async (url: string) => {
     const name = String(url).split('/').pop()!
-    return name in files ? new Response(JSON.stringify(files[name])) : new Response('', { status: 404 })
+    return name in files ? new Response(files[name]) : new Response('', { status: 404 })
   })
 
 const open = async (onChange = () => {}) => {
@@ -51,16 +54,38 @@ describe('createSatellites: carga', () => {
     satellites.dispose()
   })
 
-  it('si falta un fichero, queda en error con el motivo y no avisa', async () => {
+  it('si falta el catálogo, queda en error con el motivo y no avisa', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const missing = { ...FILES }
-    delete missing['weather.json']
+    delete missing[catalogFile]
     serve(missing)
     const onChange = vi.fn()
     const satellites = createSatellites(renderer, { onChange })
     await vi.waitFor(() => expect(satellites.data.get().kind).toBe('error'))
     expect(satellites.data.get()).toMatchObject({ kind: 'error', message: 'HTTP 404' })
     expect(onChange).not.toHaveBeenCalled()
+    satellites.dispose()
+  })
+
+  it('un catálogo que no coincide con su hash (descarga cortada o alterada) no se usa', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    serve({ ...FILES, [catalogFile]: catalogText.replace('ISS (ZARYA)', 'ISS (ZARYB)') })
+    const onChange = vi.fn()
+    const satellites = createSatellites(renderer, { onChange })
+    await vi.waitFor(() => expect(satellites.data.get().kind).toBe('error'))
+    expect(satellites.data.get()).toMatchObject({ kind: 'error', message: expect.stringContaining('hash') })
+    expect(onChange).not.toHaveBeenCalled()
+    satellites.dispose()
+  })
+
+  it('un manifiesto que dice otro número de objetos que el catálogo se rechaza', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const manifest = JSON.parse(FILES['manifest.json']!)
+    manifest.catalog.count = 21
+    serve({ ...FILES, 'manifest.json': JSON.stringify(manifest) })
+    const satellites = createSatellites(renderer, { onChange: () => {} })
+    await vi.waitFor(() => expect(satellites.data.get().kind).toBe('error'))
+    expect(satellites.data.get()).toMatchObject({ message: expect.stringContaining('21') })
     satellites.dispose()
   })
 

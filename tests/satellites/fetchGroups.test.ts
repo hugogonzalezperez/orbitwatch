@@ -89,4 +89,22 @@ describe('fetchGroups', () => {
     const { fetchImpl } = fake(json(stationsRaw))
     await expect(fetchGroups([{ name: 'active', minObjects: 1000 }], { fetchImpl, userAgent: UA })).rejects.toThrow(/al menos 1000/)
   })
+
+  it('espera entre un grupo y el siguiente, no antes del primero ni después del último', async () => {
+    const waits: number[] = []
+    const { fetchImpl } = fake(json(stationsRaw), json(stationsRaw), json(stationsRaw))
+    const groups = ['a', 'b', 'c'].map((name) => ({ name, minObjects: 5 }))
+    await fetchGroups(groups, { fetchImpl, userAgent: UA, delayMs: 700, sleep: async (ms) => void waits.push(ms) })
+    expect(waits).toEqual([700, 700])
+  })
+
+  it('tras un error no espera ni pide más', async () => {
+    const waits: number[] = []
+    const { fetchImpl, calls } = fake(json({}, 403), json(stationsRaw))
+    const groups = ['a', 'b'].map((name) => ({ name, minObjects: 5 }))
+    await expect(fetchGroups(groups, { fetchImpl, userAgent: UA, delayMs: 700, sleep: async (ms) => void waits.push(ms) })).rejects.toThrow()
+    expect(waits).toEqual([])
+    expect(calls).toHaveLength(1)
+  })
 })
+

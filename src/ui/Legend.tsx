@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react'
 import type { Engine } from '../app/engine'
 import { groupByCategory, type CatalogEntry } from '../satellites/catalog'
-import type { Category } from '../satellites/categories'
+import { CATEGORIES, type Category } from '../satellites/categories'
 import { cssColor, formatInteger } from './format'
 import { useStore } from './hooks'
 import { ChevronRightIcon } from './icons'
@@ -13,7 +13,7 @@ export function Legend({ engine }: { engine: Engine }) {
   const data = useStore(engine.data)
   const selectedId = useStore(engine.selection)
   const groups = useMemo(() => (data.kind === 'ready' ? groupByCategory(data.catalog) : []), [data])
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(CATEGORIES.filter((c) => c.hiddenByDefault).map((c) => c.id)))
   const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => engine.setHiddenCategories(hidden), [engine, hidden])

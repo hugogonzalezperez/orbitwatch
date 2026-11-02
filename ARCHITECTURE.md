@@ -7,21 +7,21 @@ Cómo encajan las piezas hoy. El porqué de cada decisión, con sus alternativas
 No hay backend. Solo un proceso fuera del navegador habla con CelesTrak; el navegador nunca lo hace.
 
 ```
-CelesTrak ──(1 petición por grupo, ≤ 1 vez cada 2 h)──> npm run data  (Action programada: pendiente)
+CelesTrak ──(20 grupos, 1 petición cada uno, ≤ 1 vez cada 2 h, con caché local)──> npm run data  (Action programada: pendiente)
                                                          │ valida (HTTP 200, esquema, nº de objetos)
-                                                         │ reduce a los 13 campos que SGP4 necesita
+                                                         │ une, deduplica y clasifica por función
                                                          ▼
-                                              public/data/<grupo>.json + manifest.json
+                                   public/data/catalog.<hash>.json (por columnas) + manifest.json
                                                          │ ficheros estáticos
                                                          ▼
-Navegador: manifest → grupos → validación → catálogo (hilo principal) y registros → Worker
+Navegador: manifest → catálogo (comprueba el hash) → columnas → lista del buscador y de la leyenda (hilo principal)
    Worker: SGP4 de todos los satélites cada 10 s de tiempo simulado → posiciones + velocidades (transferidas)
    Shader: posición + velocidad × tiempo, sombra de la Tierra → una sola llamada de dibujo
-   Seleccionado: estado completo (altitud, velocidad, sombra) + vuelta actual, en el hilo principal
+   Seleccionado: registro reconstruido de su fila + estado completo (altitud, velocidad, sombra) + vuelta actual
    React: recibe metadatos (catálogo, seleccionado), nunca datos por fotograma
 ```
 
-- **Fuente:** API GP de CelesTrak en OMM JSON (`FORMAT=json`). TLE queda descartado: hay números de catálogo de 6 dígitos.
+- **Fuente:** API GP de CelesTrak en OMM JSON (`FORMAT=json`). TLE queda descartado: hay números de catálogo de 6 dígitos. Grupos, categorías y tamaños en [docs/DATOS.md](docs/DATOS.md).
 - **Política de CelesTrak:** actualiza cada 2 h; una descarga por actualización; parar ante cualquier respuesta distinta de 200. Por eso existe la capa estática intermedia.
 - **Frescura:** `manifest.json` guarda cuándo se descargaron (no es la época de cada objeto). La ficha resume en una frase el peor aviso entre la edad de la descarga (3 h aviso, 6 h desactualizado) y la distancia entre la hora simulada y la época (3 días la precisión baja, 7 poco fiable). Pendiente: copia del último conjunto válido si CelesTrak falla.
 - **Alojamiento:** sin decidir; ver [DECISIONES.md](docs/DECISIONES.md#alojamiento-y-dominio-decisión-abierta). Pendiente la Action que refresque y despliegue.
@@ -45,9 +45,9 @@ Navegador: manifest → grupos → validación → catálogo (hilo principal) y 
 
 ## Satélites
 
-- **Catálogo y categorías (`satellites/catalog.ts`, `categories.ts`):** un objeto por número NORAD (gana el primer grupo que lo trae), ordenado por categoría y nombre. La categoría es el grupo de CelesTrak; cada una tiene nombre, tipo («Satélite meteorológico»), color y opacidad.
-- **Enjambre (`propagation/swarm.ts`, `render/swarmPoints.ts`):** un hueco fijo por satélite en buffers de tamaño fijo y un único `THREE.Points`. `createSwarm` pide al Worker una muestra (`Sample`: posiciones y velocidades en radios terrestres, y qué satélites SGP4 pudo calcular) cuando la hora simulada se aleja 10 s de la vigente (`needsRefresh`), con una petición a la vez. El vertex shader mueve cada punto con `posición + velocidad × tiempo` (el tiempo se acota a ±60 s con `extrapolationSeconds`), oscurece lo que cae en la sombra cilíndrica de la Tierra y no dibuja lo inválido ni lo de opacidad 0 (categorías ocultas). Los colores y opacidades (categoría, resaltado de la búsqueda, ocultos) viven en un buffer que solo se vuelve a subir cuando cambian (`colorsVersion`).
-- **Worker (`propagation/propagation.worker.ts`, `batch.ts`, `transport.ts`, `protocol.ts`):** `batch.ts` es el cálculo puro (`createBatch`, `propagateBatch`); el Worker lo ejecuta y devuelve los buffers transferidos, sin copiarlos. `transport.ts` elige entre el Worker y el mismo cálculo en el hilo principal si el navegador no lo permite o falla al arrancar.
+- **Catálogo y categorías (`satellites/catalog.ts`, `categories.ts`, `data/columns.ts`, `data/assemble.ts`):** el catálogo llega por columnas con la categoría ya asignada por el script (`assembleCatalog`: un objeto por número NORAD, la categoría de mayor prioridad entre sus grupos de CelesTrak). `buildCatalog` crea una entrada por satélite (nombre, número, categoría, clave de búsqueda) ordenada por categoría y nombre; los registros completos solo se reconstruyen para el elegido (`recordAt`). Cada categoría tiene nombre, tipo («Satélite meteorológico»), color, opacidad y si parte oculta (los restos).
+- **Enjambre (`propagation/swarm.ts`, `render/swarmPoints.ts`):** un hueco fijo por satélite en buffers de tamaño fijo y un único `THREE.Points`. `createSwarm` recibe las columnas y un estilo por categoría, y pide al Worker una muestra (`Sample`: posiciones y velocidades en radios terrestres, y qué satélites SGP4 pudo calcular) cuando la hora simulada se aleja 10 s de la vigente (`needsRefresh`), con una petición a la vez. El vertex shader mueve cada punto con `posición + velocidad × tiempo` (el tiempo se acota a ±60 s con `extrapolationSeconds`), oscurece lo que cae en la sombra cilíndrica de la Tierra y no dibuja lo inválido ni lo de opacidad 0 (categorías ocultas). Los colores y opacidades (categoría, resaltado de la búsqueda, ocultos) viven en un buffer que solo se vuelve a subir cuando cambian (`colorsVersion`).
+- **Worker (`propagation/propagation.worker.ts`, `batch.ts`, `transport.ts`, `protocol.ts`):** `batch.ts` es el cálculo puro (`createBatch` a partir de un `OrbitInput` de arrays tipados, `propagateBatch`); el Worker lo ejecuta y devuelve los buffers transferidos, sin copiarlos. `transport.ts` elige entre el Worker y el mismo cálculo en el hilo principal si el navegador no lo permite o falla al arrancar.
 - **Seleccionado (`createSatellites.ts`, `propagation/position.ts`):** estado completo con `stateAt` (posición, geodésicas, velocidad, sombra de la Tierra) y un marcador grande (`render/satellitePoints.ts`). Los datos que no son un número de los elementos se derivan en `satellites/orbitInfo.ts`: periodo, perigeo, apogeo y tipo de órbita (baja < 2 000 km de altura media, media, geosíncrona si el periodo es un día ±2 %, elíptica si la excentricidad es ≥ 0,25, alta por encima).
 - **Órbita (`propagation/orbit.ts`, `render/orbitLine.ts`):** la vuelta que contiene la hora mostrada, de un cruce ascendente del ecuador al siguiente; para las que no cruzan el ecuador o tardan más de 150 min (geoestacionarias, GPS), una vuelta de un periodo desde la época. Dos líneas que comparten vértices (lo recorrido, continua; lo que falta, discontinua) con 600 puntos por vuelta.
 - **Búsqueda:** `searchEntries` (sin tildes, todas las palabras, por nombre, número NORAD o designador) y `rankResults` (el número exacto primero, luego los nombres que empiezan por lo escrito). El globo atenúa lo que no coincide mediante la opacidad del atributo de color; con 500 coincidencias o menos, esas se agrandan.
@@ -82,14 +82,14 @@ src/
   globe/        lo propio de la Tierra: config (radios, caras, texturas), earth, clouds, graticule, lighting,
                 sunDisc, atmosphere, textureSource (carga KTX2), createGlobe (giro por GMST)
   satellites/   data/ (omm: validación de registros; fetchGroups: descarga que respeta la política de CelesTrak;
-                groups; manifest; freshness: edad de la época), propagation/ (position, orbit, batch, swarm, transport,
+                groups; manifest; columns: catálogo por columnas; assemble: unir y clasificar; freshness: edad de la época), propagation/ (position, orbit, batch, swarm, transport,
                 protocol, propagation.worker),
                 render/ (satellitePoints, swarmPoints, orbitLine), catalog, categories, orbitInfo,
                 createSatellites, config; conjunctions/ [pendiente]
   ui/           React: App, GlobeCanvas, Search, Legend, VirtualList, virtual, SelectedCard, Rulers, ClockPanel,
                 reliability, hooks, format, icons
   shared/       units, frames (TEME ↔ escena), sun (dirección del Sol), store (puente motor → React)
-scripts/        build-textures.sh, update-data.ts (`npm run data`), bench.ts (`npm run bench`)
+scripts/        build-textures.sh, update-data.ts (`npm run data`), cachedFetch.ts (caché local de 2 h), bench.ts (`npm run bench`)
 public/         data/ (generado por `npm run data`, no se versiona), textures/earth/ (KTX2)
 tests/          espeja src/; datos reales de CelesTrak en tests/fixtures
 docs/           DECISIONES, DATOS, RENDIMIENTO, CONVENCIONES

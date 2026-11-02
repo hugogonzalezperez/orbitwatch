@@ -12,7 +12,7 @@ Para quien lo abre desde un portfolio y quiere entender en pocos segundos qué e
 
 ## Qué hace
 
-- **Un globo con ~11 250 satélites** reales: la ISS y otras estaciones y naves, los satélites meteorológicos (incluidos los geoestacionarios) y la constelación Starlink, con datos orbitales de [CelesTrak](https://celestrak.org/) propagados con SGP4.
+- **Un globo con ~19 500 objetos** reales en 13 categorías por función (estaciones y naves, meteorología, navegación, Starlink, otras constelaciones, observación de la Tierra, ciencia, militares, geoestacionarios, radioaficionados, CubeSats, otros activos y restos de colisiones, estos ocultos al principio), con datos orbitales de [CelesTrak](https://celestrak.org/) propagados con SGP4.
 - **Tiempo simulado:** adelante, atrás, pausa y vuelta a la hora de tu equipo. La cámara está fija y es la Tierra la que gira, con la luz del Sol real a la hora mostrada (terminador, brillo del mar, sombra de la Tierra sobre el satélite elegido), atmósfera y estrellas.
 - **Elegir un satélite** pulsándolo en el globo, desde la lista de su categoría o buscándolo por nombre o número NORAD. La cámara vuela hasta él, se aleja lo necesario para ver su órbita entera y se dibuja la vuelta actual (continua lo recorrido, discontinua lo que falta).
 - **Una ficha** con qué es y en qué órbita está, sobre qué punto de la Tierra, su altitud y velocidad (con una regla que la sitúa entre la superficie, la ISS, el GPS y la órbita geoestacionaria), cuánto tarda en dar una vuelta, perigeo, apogeo, inclinación y **cuánto fiarse de los datos** (edad de la descarga y distancia a la época de los elementos).
@@ -45,7 +45,7 @@ npm run dev        # servidor de desarrollo (http://localhost:5173)
 
 Otros comandos: `npm test` (Vitest), `npm run typecheck`, `npm run build` (typecheck y build de producción en `dist/`), `npm run bench` (mide el cálculo del enjambre y la selección; ver [RENDIMIENTO.md](docs/RENDIMIENTO.md)).
 
-**Importante:** los datos no se versionan y `npm run data` respeta la política de CelesTrak (una descarga por actualización, parar ante cualquier respuesta distinta de 200). No lo ejecutes más de una vez cada 2 horas.
+**Importante:** los datos no se versionan. Descargar los 20 grupos tarda unos 33 s; si ya los bajaste hace menos de 2 h, el script usa la caché y no vuelve a pedir nada.
 
 ## Cómo está hecho
 
@@ -79,7 +79,7 @@ Resumen; el detalle y los motivos, en la documentación.
 
 ## Pendiente
 
-Catálogo completo (16 847 objetos activos), descarga y despliegue automáticos, cribado de acercamientos entre objetos con su benchmark, país y propietario de cada satélite, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
+SATCAT (país, tipo y fecha de lanzamiento), descarga y despliegue automáticos, cribado de acercamientos entre objetos con su benchmark, país y propietario de cada satélite, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
 
 ## Licencia y créditos
 

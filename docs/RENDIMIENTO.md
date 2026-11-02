@@ -4,31 +4,37 @@ El proyecto no afirma rendimiento sin medirlo. Esta página separa las cifras me
 
 ## Medido en el navegador: antes y después del Worker
 
-Cuánto tiempo pasa el hilo principal ejecutando JavaScript. Método: Chrome headless con renderizado por software, servidor de desarrollo de Vite, métricas `Performance.getMetrics` del protocolo de Chrome (`ScriptDuration` y `TaskDuration`), ventanas de 10 s con el reloj en cada velocidad, **dos ejecuciones por lado**. «Antes» es el commit anterior a pasar el cálculo al Worker.
+Cuánto tiempo pasa el hilo principal ejecutando JavaScript. Método: Chrome headless con renderizado por software, servidor de desarrollo de Vite, métricas `Performance.getMetrics` del protocolo de Chrome (`ScriptDuration` y `TaskDuration`), ventanas de 10 s con el reloj en cada velocidad, **dos ejecuciones por lado**. «Antes del Worker» es el commit anterior a pasar el cálculo al Worker; «catálogo ampliado» es la fase de datos (13 categorías, restos ocultos).
 
-| | Antes | Después |
-| --- | --- | --- |
-| Arranque: JavaScript en los primeros 12 s | 0,99 s (dos veces) | 0,78 a 0,79 s |
-| Memoria del montón de JavaScript tras cargar | 59 MB | 22 a 23 MB |
-| Reloj a 1× (% del tiempo en JavaScript) | 2,7 a 2,9 % | 2,1 % |
-| Reloj a ×10 | 16,1 a 16,2 % | 5,5 % |
-| Reloj a ×60 | 15,0 a 15,6 % | 5,0 a 5,2 % |
+| | Antes del Worker (11 250 objetos) | Con Worker (11 250) | Con Worker y catálogo ampliado (19 520) |
+| --- | --- | --- | --- |
+| Arranque: JavaScript en los primeros 12 s | 0,99 s (dos veces) | 0,78 a 0,79 s | 0,75 a 0,88 s |
+| Memoria del montón de JavaScript tras cargar | 59 MB | 22 a 23 MB | 24 a 29 MB |
+| Reloj a 1× (% del tiempo en JavaScript) | 2,7 a 2,9 % | 2,1 % | 1,9 a 2,2 % |
+| Reloj a ×10 | 16,1 a 16,2 % | 5,5 % | 5,3 a 5,6 % |
+| Reloj a ×60 | 15,0 a 15,6 % | 5,0 a 5,2 % | 4,9 a 5,0 % |
+
+Con 8 270 satélites más (+73 %), el hilo principal gasta lo mismo: el coste de añadir satélites lo paga el Worker.
 
 Lo que no dicen estas cifras: el cálculo no desaparece, se hace en otro hilo (el Worker tarda unos 8 ms por cada muestra de 11 250 satélites en Node y 11 a 20 ms en el navegador), así que el hilo que dibuja y atiende al ratón queda libre. El modo de desarrollo de Vite carga muchos módulos sueltos, y el build de producción no está medido igual.
 
 ## Medido en Node (`npm run bench`)
 
-Node 22 con `tsx` y los datos reales (11 250 objetos). Cifras de cuatro ejecuciones; las medianas varían entre ejecuciones con la carga de la máquina.
+Node 22 con `tsx` y el catálogo real (19 520 objetos). Cifras de tres ejecuciones; las medianas varían entre ejecuciones con la carga de la máquina.
 
 | Qué | Cifra |
 | --- | --- |
-| `JSON.parse` de los ficheros de datos | 14 ms |
-| Validar los 11 250 registros | 19 ms |
-| Construir y ordenar el catálogo | 34 ms (antes, con `localeCompare`: 450 ms) |
-| `json2satrec` de todos los satélites (ahora en el Worker) | 120 ms (antes, en el hilo principal) |
-| Calcular los 11 250 satélites (`propagateBatch`, lo que hace el Worker) | **8,1 ms** de mediana (la primera, con la compilación, 60 ms) |
-| Extrapolar todas las posiciones a la hora actual | 0,08 ms |
-| Elegir el satélite bajo el puntero (`pickNearest`) | 0,066 ms de mediana (p95: 0,13 a 0,17 ms) |
+| `JSON.parse` del catálogo (2,8 MB) | 14 a 15 ms |
+| Comprobar la forma de las columnas (`parseColumns`) | 4 a 5 ms |
+| Construir y ordenar el catálogo | 44 a 48 ms (con `localeCompare` suelto serían más de 450 ms con 11 250 objetos) |
+| Arrays para el Worker | 3 a 7 ms |
+| **Total en el hilo principal al arrancar** | **≈ 70 ms** |
+| `json2satrec` de todos los satélites (en el Worker) | 175 a 213 ms |
+| Calcular los 19 520 satélites (`propagateBatch`, lo que hace el Worker) | **14,7 a 15,0 ms** de mediana (la primera, con la compilación, 90 a 98 ms): ≈ 0,76 µs por objeto |
+| Extrapolar todas las posiciones a la hora actual | 0,26 ms |
+| Elegir el satélite bajo el puntero (`pickNearest`) | 0,11 ms de mediana (p95: 0,2 a 0,25 ms) |
+
+Antes de la fase de datos (11 250 objetos): arranque en el hilo principal ≈ 67 ms más 120 ms de `json2satrec` que ya estaban en el Worker; `propagateBatch` 8,1 ms; extrapolar 0,08 ms; elegir 0,066 ms.
 
 Antes de la fase B, recalcular el enjambre en el hilo principal costaba de 10 a 14 ms por actualización (mediana de 9,5 a 10 ms en cuatro ejecuciones; 13,9 ms en la primera, con el navegador y el servidor abiertos).
 
@@ -39,8 +45,8 @@ Antes de la fase B, recalcular el enjambre en el hilo principal costaba de 10 a 
 | CPU por dibujo | 0,3 a 0,7 ms |
 | CPU por actualización de la escena | 0,3 a 0,7 ms (antes: 10 a 14 ms) |
 | Llamadas de dibujo | 10 |
-| Puntos | 20 251 (11 250 satélites, 9 000 estrellas y el marcador del seleccionado) |
-| Latencia del Worker | 11 a 20 ms por muestra |
+| Puntos | 28 521 (19 520 satélites, 9 000 estrellas y el marcador del seleccionado) |
+| Latencia del Worker | 25 ms por muestra con 19 520 satélites (11 a 20 ms con 11 250) |
 | Dibujos por segundo | 1 con el reloj a 1×; 14 a ×600 (limitado por el renderizado por software) |
 
 Con el reloj en pausa, 0 dibujos en 3 s (render a demanda).
@@ -52,7 +58,7 @@ Con el reloj en pausa, 0 dibujos en 3 s (render a demanda).
 | Paquete de JavaScript | **910 kB** (259 kB comprimido), más 20 kB del Worker, 57 kB del cargador Basis y 527 kB (249 kB comprimido) de WebAssembly |
 | Fuentes que se descargan | ≈ 97 kB (IBM Plex Sans 400 y 600, 22 y 24 kB; Source Serif 4, 51 kB; solo el subconjunto latino) |
 | Texturas | 2,6 MB (día 8K), 224 kB (día 2K), 341 kB (nubes), 101 kB (brillo del mar) |
-| Datos de Starlink | 3,7 MB; 594 kB comprimido (ver [DATOS.md](DATOS.md)) |
+| Catálogo de datos | 2,85 MB; 801 kB comprimido (19 520 objetos; ver [DATOS.md](DATOS.md)) |
 | La lista de Starlink | 14 a 20 filas pintadas de 11 156 (ventana virtual) |
 | Sombra de la Tierra en el shader | Con la misma hora fija, 25 960 píxeles cambian al activarla y su brillo medio baja de 89 a 55 (−38 %); todos dentro del disco del globo |
 
@@ -68,7 +74,7 @@ Con el reloj en pausa, 0 dibujos en 3 s (render a demanda).
 - **Coste de la atmósfera**, que cubre todo el disco con un paso de relleno de pantalla completa.
 - **Memoria de la GPU** y arranque del build de producción.
 - **Móviles y GPUs integradas.**
-- **Los 16 847 objetos de `active` o más:** el cálculo en el Worker con ese tamaño se estima (≈ 0,7 µs por objeto), no se ha medido.
+- **El catálogo en una GPU real**: 28 521 puntos se miden solo con renderizado por software.
 
 ## Cómo repetir las medidas
 

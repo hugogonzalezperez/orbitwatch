@@ -1,6 +1,7 @@
 import { json2satrec, propagate, type SatRec } from 'satellite.js'
 import { temeToScene } from '../../shared/frames'
 import { EARTH_RADIUS_KM, kmToUnits } from '../../shared/units'
+import { ELEMENT_FIELDS, type OrbitInput } from '../data/columns'
 import type { OmmRecord } from '../data/omm'
 
 export interface Batch {
@@ -19,7 +20,16 @@ export interface Sample {
   valid: Uint8Array
 }
 
-export const createBatch = (records: OmmRecord[]): Batch => ({ satrecs: records.map((record) => json2satrec(record)) })
+/** El registro del satélite `i` con lo que `json2satrec` necesita (los nombres no hacen falta para calcular). */
+function recordFromInput({ ids, epoch, elements }: OrbitInput, i: number): OmmRecord {
+  const record: Record<string, string | number> = { OBJECT_NAME: '', OBJECT_ID: '', EPOCH: epoch[i]!, NORAD_CAT_ID: ids[i]! }
+  ELEMENT_FIELDS.forEach((field, k) => (record[field] = elements[i * ELEMENT_FIELDS.length + k]!))
+  return record as unknown as OmmRecord
+}
+
+export function createBatch(input: OrbitInput): Batch {
+  return { satrecs: Array.from({ length: input.count }, (_, i) => json2satrec(recordFromInput(input, i))) }
+}
 
 export const createSample = (count: number): Sample => ({
   epochMs: 0,

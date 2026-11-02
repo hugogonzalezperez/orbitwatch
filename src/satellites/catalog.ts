@@ -1,5 +1,5 @@
 import { CATEGORIES, getCategory, type Category } from './categories'
-import type { OmmRecord } from './data/omm'
+import type { CatalogColumns } from './data/columns'
 
 export interface CatalogEntry {
   /** Número de catálogo NORAD. */
@@ -26,24 +26,13 @@ const categoryRank = (id: string): number => {
   return rank === -1 ? CATEGORIES.length : rank
 }
 
-/** Un objeto por número de catálogo (gana el primer grupo que lo trae), ordenado por categoría y nombre. */
-export function buildCatalog(groups: Array<{ name: string; records: OmmRecord[] }>): CatalogEntry[] {
-  const seen = new Set<number>()
-  const entries: CatalogEntry[] = []
-  for (const { name: category, records } of groups) {
-    for (const record of records) {
-      if (seen.has(record.NORAD_CAT_ID)) continue
-      seen.add(record.NORAD_CAT_ID)
-      const name = record.OBJECT_NAME || `Sin nombre (${record.NORAD_CAT_ID})`
-      entries.push({
-        id: record.NORAD_CAT_ID,
-        name,
-        category,
-        designator: record.OBJECT_ID,
-        searchKey: normalize(`${name} ${record.NORAD_CAT_ID} ${record.OBJECT_ID}`),
-      })
-    }
-  }
+/** Una entrada por satélite de las columnas, ordenadas por categoría y nombre. */
+export function buildCatalog(columns: CatalogColumns): CatalogEntry[] {
+  const entries = columns.id.map((id, i): CatalogEntry => {
+    const name = columns.name[i] || `Sin nombre (${id})`
+    const designator = columns.designator[i]!
+    return { id, name, category: columns.categories[columns.category[i]!]!, designator, searchKey: normalize(`${name} ${id} ${designator}`) }
+  })
   return entries.sort((a, b) => categoryRank(a.category) - categoryRank(b.category) || NAME_ORDER.compare(a.name, b.name))
 }
 

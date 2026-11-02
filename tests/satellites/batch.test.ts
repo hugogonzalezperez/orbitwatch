@@ -3,12 +3,12 @@ import { EARTH_RADIUS_KM } from '../../src/shared/units'
 import { epochDate } from '../../src/satellites/data/omm'
 import { createBatch, createSample, propagateBatch } from '../../src/satellites/propagation/batch'
 import { createTracked, sceneAt } from '../../src/satellites/propagation/position'
-import { issRecord, stationRecords } from '../helpers/fixtures'
+import { inputOf, issRecord, stationRecords } from '../helpers/fixtures'
 
 const records = stationRecords()
 const t = epochDate(records[0]!).getTime() + 3_600_000
 const run = (list = records, epochMs = t) => {
-  const batch = createBatch(list)
+  const batch = createBatch(inputOf(list))
   const sample = createSample(list.length)
   propagateBatch(batch, epochMs, sample)
   return sample
@@ -44,7 +44,7 @@ describe('propagateBatch', () => {
   })
 
   it('reutiliza el mismo resultado: una llamada nueva sobrescribe la anterior', () => {
-    const batch = createBatch(records)
+    const batch = createBatch(inputOf(records))
     const sample = createSample(records.length)
     propagateBatch(batch, t, sample)
     const first = Float32Array.from(sample.positions)
@@ -57,7 +57,7 @@ describe('propagateBatch', () => {
 describe('extrapolar con la velocidad entre dos muestras', () => {
   // Es lo que hace el vertex shader: posición + velocidad × tiempo. El error es la curvatura de la órbita.
   const errorKm = (seconds: number) => {
-    const batch = createBatch([issRecord()])
+    const batch = createBatch(inputOf([issRecord()]))
     const sample = createSample(1)
     propagateBatch(batch, t, sample)
     const exact = createSample(1)
