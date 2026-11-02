@@ -1,5 +1,21 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-11-01T23:12:50Z",
-  "source": "celestrak.org GROUP=stations"
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T20:34:26.916Z",
+  "sources": [
+    {
+      "group": "stations",
+      "file": "stations.json",
+      "count": 20
+    },
+    {
+      "group": "weather",
+      "file": "weather.json",
+      "count": 74
+    },
+    {
+      "group": "starlink",
+      "file": "starlink.json",
+      "count": 11156
+    }
+  ]
 }

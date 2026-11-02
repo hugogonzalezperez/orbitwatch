@@ -1,12 +1,16 @@
 import { Group, Vector3, type WebGLRenderer } from 'three'
 import { createStore, type Store } from '../shared/store'
-import { ORBIT_POINTS, SATELLITE_COLOR, SATELLITE_SIZE_PX, SELECTION_COLOR } from './config'
+import { Color } from 'three'
+import { ORBIT_POINTS, SATELLITE_COLOR, SATELLITE_SIZE_PX, SELECTION_COLOR, SWARM_COLORS, SWARM_FALLBACK_COLOR, SWARM_SIZE_PX } from './config'
+import { findIss } from './data/groups'
 import { parseManifest } from './data/manifest'
-import { epochDate, findIss } from './data/stations'
+import { epochDate, parseOmmList, type OmmRecord } from './data/omm'
 import { currentRevolution, orbitProgress, sampleOrbit, type Revolution } from './propagation/orbit'
 import { createTracked, stateAt, type SatelliteState, type Tracked } from './propagation/position'
+import { createSwarm, type Swarm } from './propagation/swarm'
 import { createOrbitLine } from './render/orbitLine'
 import { createSatellitePoints } from './render/satellitePoints'
+import { createSwarmPoints } from './render/swarmPoints'
 
 export type SatelliteId = 'iss'
 
@@ -36,7 +40,8 @@ interface Satellites {
   /** Dirección unitaria perpendicular al plano de la órbita (posición × velocidad), o `null`. */
   issOrbitNormal(): Vector3 | null
   setSelected(selected: boolean): void
-  update(date: Date): void
+  /** `swarm: false` omite el enjambre (miles de órbitas) y deja sus posiciones como estaban. */
+  update(date: Date, options?: { swarm?: boolean }): void
   dispose(): void
 }
 
@@ -48,7 +53,22 @@ const fetchJson = async (path: string): Promise<unknown> => {
   return response.json()
 }
 
-// shortcut: instantánea manual de CelesTrak (scripts/update-stations.sh), sin Action ni validación completa; ver plan B1-B7.
+const ISS_GROUP = 'stations'
+
+/** Descarga los ficheros que lista el manifiesto (`npm run data`) y los valida. */
+async function loadGroups(): Promise<{ generatedAt: Date; groups: Array<{ name: string; records: OmmRecord[] }> }> {
+  const { generatedAt, sources } = parseManifest(await fetchJson('data/manifest.json'))
+  const groups = await Promise.all(
+    sources.map(async ({ group, file }) => ({ name: group, records: parseOmmList(await fetchJson(`data/${file}`)).records })),
+  )
+  return { generatedAt, groups }
+}
+
+const toRgb = (hex: number): [number, number, number] => {
+  const { r, g, b } = new Color(hex)
+  return [r, g, b]
+}
+
 export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChange: () => void }): Satellites {
   const points = createSatellitePoints(renderer, 1, {
     color: SATELLITE_COLOR,
@@ -56,6 +76,8 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
     sizePx: SATELLITE_SIZE_PX,
   })
   const orbitLine = createOrbitLine(SATELLITE_COLOR)
+  let swarm: Swarm | undefined
+  let swarmPoints: ReturnType<typeof createSwarmPoints> | undefined
   const object = new Group().add(points.object, orbitLine.object)
   const issStatus = createStore<IssStatus>({ kind: 'loading' })
 
@@ -85,25 +107,21 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
     if (tracked) issStatus.set(readyStatus(tracked))
   }
 
-  Promise.all([
-    fetchJson('data/stations.json'),
-    fetchJson('data/manifest.json')
-      .then((json) => parseManifest(json).generatedAt)
-      .catch((error: unknown) => {
-        console.warn('No se pudo leer el manifiesto de datos', error)
-        return null
-      }),
-  ])
-    .then(([json, generatedAt]) => {
+  loadGroups()
+    .then(({ generatedAt, groups }) => {
       if (disposed) return
-      tracked = createTracked(findIss(json))
+      tracked = createTracked(findIss(groups.find((g) => g.name === ISS_GROUP)?.records ?? []))
       downloadedAt = generatedAt
+      const others = groups.filter((g) => g.name !== ISS_GROUP)
+      swarm = createSwarm(others.map((g) => ({ records: g.records, rgb: toRgb(SWARM_COLORS[g.name] ?? SWARM_FALLBACK_COLOR) })))
+      swarmPoints = createSwarmPoints(renderer, others.reduce((n, g) => n + g.records.length, 0), SWARM_SIZE_PX)
+      object.add(swarmPoints.object)
       issStatus.set(readyStatus(tracked))
       onChange()
     })
     .catch((error: unknown) => {
       if (disposed) return
-      console.error('No se pudieron cargar los datos de la ISS', error)
+      console.error('No se pudieron cargar los datos de los satélites', error)
       issStatus.set({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
     })
 
@@ -132,13 +150,17 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
       points.setSelected(value)
       if (!value) orbit = undefined
     },
-    update(date) {
+    update(date, { swarm: updateSwarm = true } = {}) {
       if (!tracked) return
       state = stateAt(tracked, date)
       if (state) {
         points.setPositions(state.scene, 1)
         points.setSunlight(state.sunlight)
       } else points.setPositions([], 0)
+      if (updateSwarm && swarm && swarmPoints) {
+        const frame = swarm.update(date)
+        swarmPoints.setFrame(frame.positions, frame.colors, frame.count)
+      }
       updateOrbit(tracked, date)
       const wait = PUBLISH_INTERVAL_MS - (performance.now() - lastPublish)
       if (wait <= 0) publish()

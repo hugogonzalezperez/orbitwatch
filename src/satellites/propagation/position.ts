@@ -2,7 +2,7 @@ import { degreesLat, degreesLong, eciToGeodetic, gstime, json2satrec, propagate,
 import { temeToScene } from '../../shared/frames'
 import { sunVectorAu } from '../../shared/sun'
 import { kmToUnits } from '../../shared/units'
-import type { OmmRecord } from '../data/stations'
+import type { OmmRecord } from '../data/omm'
 
 export interface Tracked {
   record: OmmRecord

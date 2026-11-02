@@ -1,12 +1,12 @@
 import { gstime } from 'satellite.js'
 import { describe, expect, it } from 'vitest'
 import { EARTH_RADIUS_KM } from '../../src/shared/units'
-import { epochDate, findIss } from '../../src/satellites/data/stations'
+import { epochDate } from '../../src/satellites/data/omm'
 import { sunDirectionScene } from '../../src/shared/sun'
 import { createTracked, stateAt } from '../../src/satellites/propagation/position'
-import fixture from '../fixtures/stations.json'
+import { issRecord } from '../helpers/fixtures'
 
-const iss = createTracked(findIss(fixture))
+const iss = createTracked(issRecord())
 const oneHourAfterEpoch = new Date(epochDate(iss.record).getTime() + 3_600_000)
 
 describe('stateAt (ISS)', () => {
@@ -81,24 +81,5 @@ describe('sunlight (ISS)', () => {
       expect(state.sunlight).toBeGreaterThanOrEqual(0)
       expect(state.sunlight).toBeLessThanOrEqual(1)
     }
-  })
-})
-
-describe('findIss', () => {
-  it('encuentra la ISS por su número de catálogo', () => {
-    expect(findIss(fixture).NORAD_CAT_ID).toBe(25544)
-  })
-
-  it('rechaza algo que no es una lista', () => {
-    expect(() => findIss({})).toThrow(/lista/)
-  })
-
-  it('rechaza una lista sin la ISS', () => {
-    expect(() => findIss(fixture.filter((o) => o.NORAD_CAT_ID !== 25544))).toThrow(/25544/)
-  })
-
-  it('rechaza un registro de la ISS con campos numéricos que no son números', () => {
-    const broken = fixture.map((o) => (o.NORAD_CAT_ID === 25544 ? { ...o, MEAN_MOTION: 'x' } : o))
-    expect(() => findIss(broken)).toThrow(/MEAN_MOTION/)
   })
 })

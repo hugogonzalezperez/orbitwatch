@@ -16,7 +16,7 @@ npm run build      # typecheck + build de producción en dist/
 
 ## Datos de la ISS
 
-`public/data/stations.json` es una instantánea de CelesTrak (grupo `stations`); `manifest.json` guarda cuándo se descargó. Para refrescarla: `scripts/update-stations.sh` (una descarga por actualización de CelesTrak, que se actualiza cada 2 h; se detiene ante cualquier respuesta distinta de 200). Mientras no haya Action, la posición pierde precisión con los días y la interfaz lo indica. `?t=2026-03-20T14:46:00Z` en la URL arranca el reloj en esa hora, en pausa.
+Los datos no se versionan: `npm run data` baja de CelesTrak los grupos `stations` (ISS), `weather` y `starlink` a `public/data/` (una descarga por actualización de CelesTrak, que se actualiza cada 2 h; se detiene ante cualquier respuesta distinta de 200) y escribe `manifest.json` con cuándo se descargaron. Hay que ejecutarlo antes de `npm run dev`. Mientras no haya Action, la posición pierde precisión con los días y la interfaz lo indica. `?t=2026-03-20T14:46:00Z` en la URL arranca el reloj en esa hora, en pausa.
 
 ## Texturas
 

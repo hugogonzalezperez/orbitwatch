@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { EARTH_RADIUS_KM } from '../../src/shared/units'
-import { epochDate, findIss } from '../../src/satellites/data/stations'
+import { epochDate } from '../../src/satellites/data/omm'
 import { currentRevolution, orbitProgress, sampleOrbit } from '../../src/satellites/propagation/orbit'
 import { createTracked, stateAt } from '../../src/satellites/propagation/position'
-import fixture from '../fixtures/stations.json'
+import { issRecord } from '../helpers/fixtures'
 
-const iss = createTracked(findIss(fixture))
+const iss = createTracked(issRecord())
 const t = new Date(epochDate(iss.record).getTime() + 3_600_000)
 const rev = currentRevolution(iss, t)!
 const northKm = (date: Date) => stateAt(iss, date)!.scene[1] * EARTH_RADIUS_KM // Y de la escena = Z de TEME = norte

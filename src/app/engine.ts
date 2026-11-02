@@ -1,7 +1,7 @@
 import { MathUtils } from 'three'
 import { createGlobe } from '../globe/createGlobe'
 import { createSatellites, type IssStatus, type SatelliteId } from '../satellites/createSatellites'
-import { FOCUS_TILT_DEG, HIT_RADIUS_PX } from '../satellites/config'
+import { FOCUS_TILT_DEG, HIT_RADIUS_PX, SWARM_MIN_INTERVAL_MS } from '../satellites/config'
 import { createCamera } from '../scene/camera'
 import { createControls } from '../scene/controls'
 import { disposeScene } from '../scene/disposeScene'
@@ -40,6 +40,7 @@ export function createEngine(container: HTMLElement, { startTime }: { startTime?
 
   let needsUpdate = true // hay que recalcular la escena aunque no toque por intervalo
   let lastUpdate = -Infinity
+  let lastSwarmUpdate = -Infinity
   const requestUpdate = () => {
     needsUpdate = true
   }
@@ -47,11 +48,14 @@ export function createEngine(container: HTMLElement, { startTime }: { startTime?
     const { paused, speed } = clock.state()
     const now = performance.now()
     if (!needsUpdate && (paused || now - lastUpdate < animationIntervalMs(speed))) return
+    // Un cambio explícito (pausa, salto, velocidad) recalcula todo; en la animación continua, el enjambre va a su ritmo.
+    const swarm = needsUpdate || now - lastSwarmUpdate >= SWARM_MIN_INTERVAL_MS
     needsUpdate = false
     lastUpdate = now
+    if (swarm) lastSwarmUpdate = now
     const date = clock.time()
     globe.update(date)
-    satellites.update(date)
+    satellites.update(date, { swarm })
     loop.invalidate()
   }
 
