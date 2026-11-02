@@ -10,6 +10,9 @@
     "url": "git+https://github.com/hugogonzalezperez/orbitwatch.git"
   },
   "homepage": "https://github.com/hugogonzalezperez/orbitwatch#readme",
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

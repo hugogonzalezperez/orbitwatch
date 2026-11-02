@@ -36,9 +36,8 @@ function periodRevolution({ record }: Tracked, date: Date): Revolution {
 }
 
 /**
- * La vuelta que contiene `date`: de un cruce ascendente del ecuador al siguiente. Si no se encuentra (órbita casi
- * ecuatorial, como la geoestacionaria, o de más de 150 min, como las de GPS), es una vuelta de un periodo desde la época.
- * Es `null` solo si SGP4 no puede calcular el satélite a esa hora.
+ * La vuelta que contiene `date`, de un cruce ascendente del ecuador al siguiente; si no hay (casi ecuatorial o de más de
+ * 150 min, como geoestacionarias y GPS), un periodo desde la época. `null` solo si SGP4 no puede calcular el satélite.
  */
 export function currentRevolution(tracked: Tracked, date: Date): Revolution | null {
   if (north(tracked, date.getTime()) === null) return null

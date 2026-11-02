@@ -1,5 +1,8 @@
 import type { Regime } from '../satellites/orbitInfo'
 
+/** Espacio duro: entre cifra y unidad, y entre miles, para que no se parta en dos líneas. */
+export const NBSP = '\u00a0'
+
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
@@ -7,18 +10,21 @@ const DAY = 24 * HOUR
 /** "14 h 20 min", "2 d 3 h": una duración legible; el signo se ignora. */
 export function formatSpan(ms: number): string {
   const span = Math.abs(ms)
-  if (span < MINUTE) return 'menos de 1 min'
-  if (span < HOUR) return `${Math.floor(span / MINUTE)} min`
+  if (span < MINUTE) return `menos de 1${NBSP}min`
+  if (span < HOUR) return `${Math.floor(span / MINUTE)}${NBSP}min`
   if (span < DAY) {
     const minutes = Math.floor((span % HOUR) / MINUTE)
-    return `${Math.floor(span / HOUR)} h${minutes ? ` ${minutes} min` : ''}`
+    return `${Math.floor(span / HOUR)}${NBSP}h${minutes ? ` ${minutes}${NBSP}min` : ''}`
   }
   const hours = Math.floor((span % DAY) / HOUR)
-  return `${Math.floor(span / DAY)} d${hours ? ` ${hours} h` : ''}`
+  return `${Math.floor(span / DAY)}${NBSP}d${hours ? ` ${hours}${NBSP}h` : ''}`
 }
 
-/** Entero con espacio como separador de miles: "27 576". */
-export const formatInteger = (value: number): string => String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+/** Entero con espacio duro como separador de miles: "27 576". */
+export const formatInteger = (value: number): string => String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP)
+
+/** Color de un número 0xRRGGBB como valor CSS: "#ffc857". */
+export const cssColor = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`
 
 /** "×60", "−×60", "×86 400". */
 export const formatSpeed = (speed: number): string => `${speed < 0 ? '−' : ''}×${formatInteger(Math.abs(speed))}`

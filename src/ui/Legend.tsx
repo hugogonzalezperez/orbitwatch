@@ -2,12 +2,11 @@ import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react'
 import type { Engine } from '../app/engine'
 import { groupByCategory, type CatalogEntry } from '../satellites/catalog'
 import type { Category } from '../satellites/categories'
-import { formatInteger } from './format'
+import { cssColor, formatInteger } from './format'
 import { useStore } from './hooks'
 import { ChevronRightIcon } from './icons'
 import { VirtualList } from './VirtualList'
 
-const cssColor = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`
 
 /** Leyenda del globo: qué son los puntos, cuántos hay de cada tipo, y un interruptor para mostrarlos u ocultarlos. */
 export function Legend({ engine }: { engine: Engine }) {

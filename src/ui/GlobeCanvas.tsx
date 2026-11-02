@@ -31,5 +31,5 @@ export function GlobeCanvas({ onEngine }: { onEngine: (engine: Engine | null) =>
       </p>
     )
   }
-  return <div ref={ref} className="globe" />
+  return <div ref={ref} className="globe" role="img" aria-label="Globo 3D con los satélites en órbita. Para elegir uno, usa el buscador o las listas de la izquierda." />
 }

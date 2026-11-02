@@ -15,10 +15,9 @@ interface Framing {
 }
 
 /**
- * Distancia de la cámara al centro a la que se ve el satélite con su órbita: tanto el punto más cercano a la cámara
- * (el que más se abre en vertical por la perspectiva) como los laterales caben dentro de `FRAMING_MARGIN` del campo.
- * Si ya estás más cerca de la distancia habitual la respeta; si estás más lejos, vuelve a ella (a menos que la órbita
- * pida más), para no dejar la Tierra diminuta tras mirar un satélite lejano. Respeta los límites del zoom.
+ * Distancia de la cámara al centro a la que se ve el satélite con su órbita: el punto más cercano (el que más se abre por
+ * la perspectiva) y los laterales caben en `FRAMING_MARGIN` del campo. Respeta la distancia actual si es menor que la
+ * habitual; si es mayor, vuelve a ella salvo que la órbita pida más. Siempre dentro de los límites del zoom.
  */
 export function framingDistance({ orbitRadius, tiltRad, fovDeg, aspect, currentDistance }: Framing): number {
   const halfVertical = (fovDeg / 2) * (Math.PI / 180)
@@ -31,9 +30,8 @@ export function framingDistance({ orbitRadius, tiltRad, fovDeg, aspect, currentD
 const UP = new Vector3(0, 1, 0)
 
 /**
- * Dirección (unitaria) desde la que mirar un satélite: a `tiltRad` de la suya, hacia un lado u otro del plano de su
- * órbita, para no verla de canto. Se elige el lado en que el satélite cae en la mitad superior de la pantalla, que es
- * la que dejan libre el reloj (abajo) y la ficha y la columna (a los lados).
+ * Dirección (unitaria) desde la que mirar un satélite: a `tiltRad` de la suya, a un lado u otro del plano de la órbita para
+ * no verla de canto. Se elige el lado que deja al satélite en la mitad superior, libre del reloj, la ficha y la columna.
  */
 export function focusDirection(satellite: Vector3, orbitNormal: Vector3, tiltRad: number): Vector3 {
   const side = satellite.clone().normalize().multiplyScalar(Math.cos(tiltRad))

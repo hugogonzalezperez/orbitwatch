@@ -56,6 +56,14 @@ export function createEngine(container: HTMLElement, { startTime }: { startTime?
     flight = null // si tomas los mandos, el vuelo se cancela
   })
   const labels = createLabels(container)
+  // La etiqueta del seleccionado solo se recoloca si algo pudo moverla: la cámara, el satélite o el tamaño.
+  let labelDirty = true
+  controls.addEventListener('change', () => void (labelDirty = true))
+  const flushLabel = () => {
+    if (!labelDirty) return
+    labelDirty = false
+    placeSelectedLabel()
+  }
 
   let needsUpdate = true // hay que recalcular la escena aunque no toque por intervalo
   let lastUpdate = -Infinity
@@ -69,12 +77,12 @@ export function createEngine(container: HTMLElement, { startTime }: { startTime?
       camera.position.copy(flight.position(elapsed))
       controls.update()
       loop.invalidate()
+      labelDirty = true
       if (flight.finished(elapsed)) flight = null
     }
-    placeSelectedLabel()
     const { paused, speed } = clock.state()
     const now = performance.now()
-    if (!needsUpdate && (paused || now - lastUpdate < animationIntervalMs(speed))) return
+    if (!needsUpdate && (paused || now - lastUpdate < animationIntervalMs(speed))) return flushLabel()
     // Un cambio explícito (pausa, salto, velocidad) recalcula todo; en la animación continua, el enjambre va a su ritmo.
     const swarm = needsUpdate || now - lastSwarmUpdate >= SWARM_MIN_INTERVAL_MS
     needsUpdate = false
@@ -83,6 +91,8 @@ export function createEngine(container: HTMLElement, { startTime }: { startTime?
     const date = clock.time()
     globe.update(date)
     satellites.update(date, { swarm })
+    labelDirty = true
+    flushLabel()
     loop.invalidate()
   }
 
@@ -96,13 +106,19 @@ export function createEngine(container: HTMLElement, { startTime }: { startTime?
   })
   scene.add(globe.object, satellites.object)
   container.appendChild(renderer.domElement)
-  const stopFitting = fitToContainer(container, renderer, camera, loop.invalidate)
+  const stopFitting = fitToContainer(container, renderer, camera, () => {
+    labelDirty = true
+    loop.invalidate()
+  })
   const stopClock = clock.subscribe(requestUpdate)
   const stopSelection = selection.subscribe(() => {
     satellites.select(selection.get())
     requestUpdate()
   })
-  const stopSelected = satellites.selected.subscribe(() => labels.setSelected(satellites.selected.get()?.name ?? null))
+  const stopSelected = satellites.selected.subscribe(() => {
+    labels.setSelected(satellites.selected.get()?.name ?? null)
+    labelDirty = true
+  })
 
   /** Pone la etiqueta del seleccionado junto a su punto, si se ve. */
   const placeSelectedLabel = () => {

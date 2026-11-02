@@ -27,8 +27,8 @@ export class CelestrakError extends Error {
 export const groupUrl = (group: string): string => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${encodeURIComponent(group)}&FORMAT=json`
 
 /**
- * Descarga los grupos de uno en uno, una sola vez cada uno. Ante cualquier respuesta distinta de 200 (o un fallo de red,
- * o datos que no valen) se detiene sin reintentar: CelesTrak bloquea la IP si se insiste tras un 403 o un 404.
+ * Descarga los grupos de uno en uno, una vez cada uno. Ante cualquier respuesta distinta de 200, fallo de red o datos que
+ * no valen, se detiene sin reintentar: CelesTrak bloquea la IP si se insiste tras un 403 o un 404.
  */
 export async function fetchGroups(
   groups: GroupSpec[],

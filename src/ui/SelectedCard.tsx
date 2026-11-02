@@ -4,7 +4,7 @@ import { getCategory } from '../satellites/categories'
 import type { SelectedInfo } from '../satellites/createSatellites'
 import { orbitProgress } from '../satellites/propagation/orbit'
 import type { Store } from '../shared/store'
-import { describeSunlight, formatDecimal, formatInteger, formatLatitude, formatLongitude, formatSpan, describeRegime } from './format'
+import { NBSP, describeRegime, describeSunlight, formatDecimal, formatInteger, formatLatitude, formatLongitude, formatSpan } from './format'
 import { useClockTime, useNow, useStore } from './hooks'
 import { CloseIcon } from './icons'
 import { describeReliability } from './reliability'
@@ -44,7 +44,7 @@ export function SelectedCard({ selected, clock, onClose, onCenter }: Props) {
     <aside className="card" aria-labelledby={headingId}>
       <header className="card-head">
         <div>
-          <h2 id={headingId} className="card-name">
+          <h2 id={headingId} className="card-name" translate="no">
             {info.name}
           </h2>
           <p className="card-kind">
@@ -66,13 +66,13 @@ export function SelectedCard({ selected, clock, onClose, onCenter }: Props) {
             <div>
               <dt>Altitud</dt>
               <dd className="num">
-                {formatInteger(state.altKm)} <span className="unit">km</span>
+                {formatInteger(state.altKm)}{NBSP}<span className="unit">km</span>
               </dd>
             </div>
             <div>
               <dt>Velocidad</dt>
               <dd className="num">
-                {formatDecimal(state.speedKmS, 2)} <span className="unit">km/s</span>
+                {formatDecimal(state.speedKmS, 2)}{NBSP}<span className="unit">km/s</span>
               </dd>
             </div>
           </dl>
@@ -97,11 +97,11 @@ export function SelectedCard({ selected, clock, onClose, onCenter }: Props) {
         <dl className="facts">
           <div>
             <dt>Perigeo</dt>
-            <dd className="num">{formatInteger(shape.perigeeKm)} km</dd>
+            <dd className="num">{formatInteger(shape.perigeeKm)}{NBSP}km</dd>
           </div>
           <div>
             <dt>Apogeo</dt>
-            <dd className="num">{formatInteger(shape.apogeeKm)} km</dd>
+            <dd className="num">{formatInteger(shape.apogeeKm)}{NBSP}km</dd>
           </div>
           <div>
             <dt>Inclinación</dt>

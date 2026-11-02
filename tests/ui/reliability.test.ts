@@ -10,7 +10,7 @@ describe('describeReliability', () => {
   it('con elementos de hoy y una descarga reciente, es fiable', () => {
     const r = describeReliability({ epoch: at(3 * HOUR), downloadedAt: at(HOUR), simTime: now, now })
     expect(r.band).toBe('ok')
-    expect(r.summary).toBe('Fiable: elementos de hace 3 h')
+    expect(r.summary).toBe('Fiable: elementos de hace 3\u00a0h')
   })
 
   it('con la hora simulada a más de 3 días de la época, avisa de que la precisión baja', () => {
@@ -39,7 +39,7 @@ describe('describeReliability', () => {
 
   it('da el detalle de las dos edades', () => {
     const r = describeReliability({ epoch: at(3 * HOUR), downloadedAt: at(HOUR), simTime: now, now })
-    expect(r.epochAge).toBe('hace 3 h')
-    expect(r.downloadAge).toBe('hace 1 h')
+    expect(r.epochAge).toBe('hace 3\u00a0h')
+    expect(r.downloadAge).toBe('hace 1\u00a0h')
   })
 })

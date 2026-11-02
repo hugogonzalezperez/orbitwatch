@@ -22,9 +22,19 @@ function Brand({ engine }: { engine: Engine }) {
   }
   return (
     <header className="brand">
-      <h1>OrbitWatch</h1>
+      <h1 translate="no">OrbitWatch</h1>
       <p className={band === 'ok' ? 'brand-line' : `brand-line note-${band}`}>{line}</p>
     </header>
+  )
+}
+
+/** Anuncia a los lectores de pantalla qué satélite se ha elegido: la ficha aparece sin que nada lo diga. */
+function SelectionAnnouncer({ engine }: { engine: Engine }) {
+  const selected = useStore(engine.selected)
+  return (
+    <p className="sr-only" role="status">
+      {selected ? `Seleccionado: ${selected.name}` : ''}
+    </p>
   )
 }
 
@@ -43,15 +53,16 @@ export function App() {
   }, [engine])
 
   return (
-    <div className="app">
+    <main className="app">
       <GlobeCanvas onEngine={onEngine} />
       {engine && (
         <>
-          <nav className="rail" aria-label="Satélites">
+          <aside className="rail" aria-label="Búsqueda y categorías">
             <Brand engine={engine} />
             <Search engine={engine} />
             <Legend engine={engine} />
-          </nav>
+          </aside>
+          <SelectionAnnouncer engine={engine} />
           <SelectedCard selected={engine.selected} clock={engine.clock} onClose={() => engine.select(null)} onCenter={engine.focusSelected} />
           <div className="dock">
             <ClockPanel clock={engine.clock} />
@@ -62,6 +73,6 @@ export function App() {
         Texturas: <a href="https://www.solarsystemscope.com/textures/">Solar System Scope</a> (CC BY 4.0). Datos orbitales:{' '}
         <a href="https://celestrak.org/">CelesTrak</a>.
       </p>
-    </div>
+    </main>
   )
 }

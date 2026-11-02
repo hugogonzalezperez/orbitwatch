@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark; /* barras de desplazamiento y controles nativos oscuros */
   --ink: #ece8dd;
   --ink-dim: #a3a7ad;
   --panel: #0b0f14;
@@ -36,6 +37,7 @@ button {
 }
 button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
 button:disabled { opacity: 0.45; cursor: default; }
+button { touch-action: manipulation; } /* sin el retraso del doble toque */
 button.outline { border: 1px solid var(--line); }
 button.primary { background: var(--accent); color: var(--panel); font-weight: 600; }
 button.primary:hover:not(:disabled) { background: #85b8ee; }
@@ -74,6 +76,7 @@ button.primary:hover:not(:disabled) { background: #85b8ee; }
 .swatch { flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--swatch); }
 .swatch-off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--swatch); } /* oculta: hueco, no solo más apagado */
 
+.legend, .vlist, .card, .results { overscroll-behavior: contain; } /* el desplazamiento no se traslada a la página */
 .legend { list-style: none; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .legend-row { display: flex; align-items: center; }
 .legend-toggle { flex: 1; min-width: 0; justify-content: flex-start; gap: 0.75rem; padding: 0 0.5rem; }

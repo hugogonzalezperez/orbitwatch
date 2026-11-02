@@ -4,9 +4,8 @@ import { sunDirectionScene } from '../shared/sun'
 const SUN_ANGULAR_RADIUS = 0.2665 * MathUtils.DEG2RAD // el Sol mide 0,53° de diámetro visto desde la Tierra
 const GLOW_FACTOR = 9 // el resplandor se extiende nueve veces el radio del disco
 
-// El Sol está en el infinito, como las estrellas: la vista solo aporta su rotación (la dirección real se ve igual desde
-// cualquier punto de la órbita de la cámara), la profundidad se fuerza al fondo (xyww) y la Tierra lo tapa. El plano
-// se orienta a la cámara en el propio shader, sumando su tamaño en el espacio de la vista; no usa matrices del objeto.
+// En el infinito, como las estrellas: la vista aporta solo su rotación, la profundidad se fuerza al fondo (xyww) y la Tierra lo
+// tapa. El plano se orienta a la cámara en el propio shader, no con matrices del objeto.
 const VERTEX = /* glsl */ `
   uniform vec3 uDirection;
   varying vec2 vUv;

@@ -13,6 +13,7 @@ export function createLabels(container: HTMLElement): Labels {
   const make = (className: string): HTMLElement => {
     const element = document.createElement('div')
     element.className = `sat-label ${className}`
+    element.translate = false // nombres de satélite: la traducción automática los estropearía
     element.hidden = true
     container.appendChild(element)
     return element

@@ -10,11 +10,8 @@ const VERTEX = /* glsl */ `
   }
 `
 
-// Velo de aire como en las fotos de la Tierra: azul claro que se funde sobre el borde del disco, con poco brillo fuera.
-// El brillo sigue la longitud del camino de la vista dentro de la capa, hasta el suelo si lo toca: es mínimo mirando
-// hacia abajo, crece hacia el borde y vuelve a cero en el límite exterior de la capa. Sale de la geometría exacta del
-// rayo con las dos esferas, no de un efecto Fresnel ajustado a ojo. Se dibujan las caras delanteras de la capa, que
-// cubren el disco y el aro exterior con la misma fórmula. El color sigue al Sol: de noche no hay nada.
+// Velo azul claro que se funde sobre el borde, con poco brillo fuera. El brillo es la longitud del camino de la vista dentro
+// de la capa (geometría exacta del rayo con las dos esferas): mínimo mirando hacia abajo, máximo en el borde, cero fuera. Sigue al Sol.
 const FRAGMENT = /* glsl */ `
   uniform vec3 uSun;
   uniform float uRadius;

@@ -49,7 +49,7 @@ export function VirtualList({ id, label, entries, selectedId, onSelect }: Props)
         {entries.slice(start, end).map((entry, i) => (
           <div key={entry.id} className="vlist-row" style={{ top: (start + i) * ROW_HEIGHT }}>
             <button type="button" className="legend-sat" aria-current={entry.id === selectedId} onClick={() => onSelect(entry.id)}>
-              <span className="result-name">{entry.name}</span>
+              <span className="result-name" translate="no">{entry.name}</span>
               <span className="result-id num">{entry.id}</span>
             </button>
           </div>

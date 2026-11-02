@@ -2,10 +2,11 @@ import { useDeferredValue, useEffect, useId, useMemo, useRef, useState, type CSS
 import type { Engine } from '../app/engine'
 import { rankResults, searchEntries } from '../satellites/catalog'
 import { getCategory } from '../satellites/categories'
+import { cssColor } from './format'
 import { useStore } from './hooks'
+import { escapeAction } from './searchKeys'
 
 const MAX_RESULTS = 8
-const cssColor = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`
 
 /** Buscador con desplegable: se abre al escribir, se maneja con el teclado y se enfoca con «/». */
 export function Search({ engine }: { engine: Engine }) {
@@ -55,9 +56,11 @@ export function Search({ engine }: { engine: Engine }) {
         event.preventDefault()
         choose(entry.id)
       }
-    } else if (event.key === 'Escape' && (open || query)) {
-      event.preventDefault() // el Esc global no debe deseleccionar además
-      if (open && query) setOpen(false)
+    } else if (event.key === 'Escape') {
+      const action = escapeAction({ open, query })
+      if (action === 'pass') return // el Esc global cierra la ficha
+      event.preventDefault()
+      if (action === 'close') setOpen(false)
       else setQuery('')
     }
   }
@@ -74,7 +77,7 @@ export function Search({ engine }: { engine: Engine }) {
         aria-autocomplete="list"
         aria-activedescendant={expanded && results[active] ? `${listId}-${results[active].id}` : undefined}
         aria-label="Buscar satélite por nombre o número NORAD"
-        placeholder={catalog || data.kind === 'error' ? 'Buscar satélite' : 'Cargando satélites…'}
+        placeholder={catalog || data.kind === 'error' ? 'Buscar: ISS, GOES 16, 25544…' : 'Cargando satélites…'}
         disabled={!catalog}
         value={query}
         autoComplete="off"
@@ -101,13 +104,13 @@ export function Search({ engine }: { engine: Engine }) {
             onMouseEnter={() => setActive(index)}
           >
             <i className="swatch" style={{ '--swatch': cssColor(getCategory(entry.category).color) } as CSSProperties} aria-hidden="true" />
-            <span className="result-name">{entry.name}</span>
+            <span className="result-name" translate="no">{entry.name}</span>
             <span className="result-id num">{entry.id}</span>
           </li>
         ))}
         {expanded && results.length === 0 && (
           <li role="presentation" className="results-empty">
-            Ningún satélite coincide con «{query.trim()}».
+            Ningún satélite coincide con «{query.trim()}». Prueba con otro nombre o con el número NORAD.
           </li>
         )}
       </ul>
