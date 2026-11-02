@@ -1,0 +1,74 @@
+# Hoja de ruta
+
+Qué falta para dar OrbitWatch por concluido, en fases con hitos comprobables. Se marca cada casilla cuando está hecha **y verificada**; el criterio de cada fase dice cómo se comprueba. Las decisiones y su motivo están en [DECISIONES.md](DECISIONES.md); lo medido, en [RENDIMIENTO.md](RENDIMIENTO.md); los términos técnicos, en [GLOSARIO.md](GLOSARIO.md).
+
+Estado a 2026-11-02: la web funciona de punta a punta con ~11 250 satélites (ISS, estaciones, meteorología y Starlink), pero los datos se descargan a mano y no hay despliegue.
+
+## Fase A: corrección y limpieza
+
+Arreglar lo que la revisión del código y de la interfaz encontró, antes de construir encima.
+
+- [ ] **A1. Arranque más rápido.** Ordenar el catálogo con un `Intl.Collator` reutilizado: 344 ms → 15 ms medido en una prueba aparte. El arranque se añade a `npm run bench`.
+- [ ] **A2. `Esc` con el buscador vacío enfocado** debe cerrar la ficha (hoy se lo traga). La decisión va en una función pura con test.
+- [ ] **A3. Tests de `createSatellites`** (selección, pulsar sobre un punto, categorías ocultas, radio de la órbita) con los datos reales de `tests/fixtures` y un `fetch` falso.
+- [ ] **A4. Quitar duplicados** (`cssColor` está en dos ficheros).
+- [ ] **A5. Guías de interfaz web:** `theme-color` y `color-scheme: dark`; placeholder del buscador con «…» y ejemplo; espacios duros entre cifra y unidad y en los miles; `<aside>` en lugar de `<nav>`; nombre accesible para el canvas; anuncio de la selección para lectores de pantalla; `overscroll-behavior` y `touch-action`; `translate="no"` en nombres; búsqueda sin resultados con una sugerencia.
+- [ ] **A6. La etiqueta del seleccionado** solo se recoloca cuando cambia algo (hoy, en cada fotograma).
+- [ ] **A7. Comentarios:** bloques de 3 o más líneas recortados a 2.
+- [ ] **A8. `engines`** en `package.json`.
+
+**Criterio:** `npm test`, `npm run typecheck` y `npm run build` en verde, y comprobado en el navegador (buscador, ficha, `Esc`, unidades).
+
+## Fase B: rendimiento
+
+Sacar el cálculo de los satélites del hilo principal y poder medir en cualquier equipo. Qué es un Worker y SGP4: [GLOSARIO.md](GLOSARIO.md).
+
+- [ ] **B1. Medidor `?perf`:** renders por segundo, tiempo de CPU por fotograma, llamadas de dibujo, puntos, tiempo del cálculo y antigüedad de la última muestra. Para medir en una GPU real sin herramientas.
+- [ ] **B2. Cálculo en un Worker con extrapolación en el shader.** El Worker calcula posición y velocidad de todos los satélites cada pocos segundos de tiempo simulado; el vertex shader mueve cada punto con `posición + velocidad × tiempo` entre muestras. Un hueco fijo por satélite: se oculta con opacidad 0 y solo se suben posiciones. Sin Worker (entornos de prueba), el mismo cálculo corre en el hilo principal.
+- [ ] **B3. Sombra de la Tierra en el shader** para todo el enjambre.
+- [ ] **B4. Medir antes y después** y actualizar [RENDIMIENTO.md](RENDIMIENTO.md) y [ARCHITECTURE.md](../ARCHITECTURE.md).
+
+**Criterio:** el hilo principal no calcula órbitas del enjambre; el arranque ya no hace `json2satrec` de 11 250 objetos; el error de la extrapolación está acotado con un test; todo comprobado en el navegador.
+
+## Fase C: publicar
+
+- [ ] **C1.** Script de datos para integración continua (una descarga, validación, copia del último conjunto válido si CelesTrak falla).
+- [ ] **C2.** GitHub Action programada cada 2 h (minuto 17, que no coincide con la hora en punto) que descarga, construye y despliega en GitHub Pages.
+- [ ] **C3.** Decidir dirección: subdominio de tu dominio (CNAME) o ruta; configurar la base de la aplicación según la elección.
+- [ ] **C4.** Comprobar en producción que CelesTrak no bloquea las IPs de la Action (riesgo abierto).
+- [ ] **C5.** Medir en una GPU real con `?perf` y documentarlo.
+
+**Criterio:** URL pública que se refresca sola, dos ejecuciones programadas seguidas correctas y cifras de una GPU real.
+
+## Fase D: más datos
+
+- [ ] **D1.** Más grupos de CelesTrak, organizados por función (navegación, comunicaciones, observación, ciencia, radioaficionados, militares, CubeSats) y los grupos de restos de colisiones.
+- [ ] **D2.** SATCAT (propietario, tipo, fecha de lanzamiento): separar restos de cargas útiles, filtrar por país.
+- [ ] **D3.** Formato de datos por columnas, con hash en el nombre y caché.
+- [ ] **D4.** Densidad visual: restos ocultos por defecto, puntos que se atenúan según el zoom.
+- [ ] **D5.** Colores por régimen orbital.
+
+**Criterio:** el catálogo completo carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo.
+
+## Fase E: diseño y experiencia de uso
+
+- [ ] **E1.** Móvil: la columna y la ficha pasan a una hoja inferior.
+- [ ] **E2.** URL con estado (`?sat=…`, categorías ocultas) para compartir un satélite a una hora.
+- [ ] **E3.** Saltar a una fecha y hora desde el reloj.
+- [ ] **E4.** Seguir al satélite con la cámara al acelerar el tiempo.
+- [ ] **E5.** Primer uso: una ayuda corta de los gestos.
+- [ ] **E6.** Detalles de la ficha (el desplegable «Ver el detalle» es poco visible) y filas de 44 px.
+
+## Fase F: cribado y entrega
+
+- [ ] **F1.** Cribado de acercamientos en cascada (altitud, rejilla espacial, refinado) con panel de resultados y benchmark frente a la versión ingenua, publicado en el README.
+- [ ] **F2.** Prueba de humo con Playwright.
+- [ ] **F3.** Pasada de accesibilidad con teclado y lector de pantalla.
+- [ ] **F4.** README con la URL, vídeo corto y cifras finales.
+- [ ] **F5.** Partir el paquete de JavaScript (910 kB sin comprimir, 259 kB comprimido) si la medición lo justifica.
+
+## Decisiones abiertas
+
+- Dirección del sitio: subdominio o ruta (fase C).
+- Si el mapa de noche y el relieve entran (aspecto del planeta).
+- Si hace falta calidad adaptativa por tiempo de fotograma, tras medir en una GPU real.
