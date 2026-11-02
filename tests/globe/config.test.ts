@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { CLOUD_RADIUS, CLOUD_SEGMENTS, GRATICULE_RADIUS } from '../../src/globe/config'
-import { facetedSphereMinRadius } from '../../src/shared/geometry'
 import { EARTH_RADIUS_KM } from '../../src/shared/units'
 
 describe('capas de la esfera', () => {
@@ -11,7 +10,9 @@ describe('capas de la esfera', () => {
   })
 
   it('el centro de las caras de las nubes no se hunde bajo la superficie', () => {
-    // Con pocas caras asoma la Tierra a través de la capa y salen rombos.
-    expect(facetedSphereMinRadius(CLOUD_RADIUS, CLOUD_SEGMENTS.width, CLOUD_SEGMENTS.height)).toBeGreaterThan(1)
+    // Con pocas caras asoma la Tierra a través de la capa y salen rombos. El centro de una cara está a la media diagonal
+    // de los vértices, que sí están en CLOUD_RADIUS.
+    const halfDiagonal = Math.hypot(Math.PI / CLOUD_SEGMENTS.width, Math.PI / (2 * CLOUD_SEGMENTS.height))
+    expect(CLOUD_RADIUS * Math.cos(halfDiagonal)).toBeGreaterThan(1)
   })
 })

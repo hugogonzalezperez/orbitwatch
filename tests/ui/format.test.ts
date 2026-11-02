@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatLatitude, formatLongitude, formatSpan, formatSpeed } from '../../src/ui/format'
+import { describeSunlight, describeTimeOffset, formatInteger, formatLatitude, formatLongitude, formatSpan, formatSpeed } from '../../src/ui/format'
 
 const MIN = 60_000
 const H = 60 * MIN
@@ -41,5 +41,32 @@ describe('formatLatitude / formatLongitude', () => {
   it('este y oeste (O)', () => {
     expect(formatLongitude(120.34)).toBe('120,3° E')
     expect(formatLongitude(-3.7)).toBe('3,7° O')
+  })
+})
+
+describe('describeTimeOffset', () => {
+  const real = Date.parse('2026-11-02T12:00:00Z')
+
+  it('sin diferencia apreciable es tiempo real', () => {
+    expect(describeTimeOffset(real + 1500, real)).toBe('Tiempo real')
+  })
+  it('adelantada y atrasada, con cuánto', () => {
+    expect(describeTimeOffset(real + (2 * 60 + 10) * 60_000, real)).toBe('Adelantada 2 h 10 min')
+    expect(describeTimeOffset(real - 35 * 60_000, real)).toBe('Atrasada 35 min')
+  })
+})
+
+describe('formatInteger', () => {
+  it('redondea y separa los miles', () => {
+    expect(formatInteger(27_575.6)).toBe('27 576')
+    expect(formatInteger(427)).toBe('427')
+  })
+})
+
+describe('describeSunlight', () => {
+  it('a la luz, en penumbra y en la sombra', () => {
+    expect(describeSunlight(1)).toBe('A la luz del Sol')
+    expect(describeSunlight(0)).toBe('En la sombra de la Tierra')
+    expect(describeSunlight(0.37)).toBe('En penumbra (37 % de luz)')
   })
 })

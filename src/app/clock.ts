@@ -1,4 +1,4 @@
-export interface ClockState {
+interface ClockState {
   /** Segundos simulados por segundo real. Negativa: el tiempo retrocede. */
   speed: number
   paused: boolean

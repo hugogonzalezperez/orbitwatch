@@ -2,6 +2,7 @@ import { gstime } from 'satellite.js'
 import { describe, expect, it } from 'vitest'
 import { EARTH_RADIUS_KM } from '../../src/shared/units'
 import { epochDate, findIss } from '../../src/satellites/data/stations'
+import { sunDirectionScene } from '../../src/shared/sun'
 import { createTracked, stateAt } from '../../src/satellites/propagation/position'
 import fixture from '../fixtures/stations.json'
 
@@ -37,6 +38,14 @@ describe('stateAt (ISS)', () => {
     expect((lon * 180) / Math.PI).toBeCloseTo(state.lonDeg, 6)
   })
 
+  it('la velocidad en la escena tiene el módulo de la rapidez y es casi perpendicular a la posición (órbita casi circular)', () => {
+    const [vx, vy, vz] = state.velocity
+    expect(Math.hypot(vx, vy, vz)).toBeCloseTo(state.speedKmS, 9)
+    const [x, y, z] = state.scene
+    const cosine = (x * vx + y * vy + z * vz) / (Math.hypot(x, y, z) * Math.hypot(vx, vy, vz))
+    expect(Math.abs(cosine)).toBeLessThan(0.05)
+  })
+
   it('un cuarto de órbita después la posición ha cambiado de forma coherente (~92 min por vuelta)', () => {
     const later = stateAt(iss, new Date(oneHourAfterEpoch.getTime() + 23 * 60_000))!
     const a = state.scene
@@ -44,6 +53,34 @@ describe('stateAt (ISS)', () => {
     const angle = Math.acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (Math.hypot(...a) * Math.hypot(...b)))
     expect((angle * 180) / Math.PI).toBeGreaterThan(80)
     expect((angle * 180) / Math.PI).toBeLessThan(100)
+  })
+})
+
+describe('sunlight (ISS)', () => {
+  const samples = Array.from({ length: 1440 }, (_, minute) => {
+    const date = new Date(oneHourAfterEpoch.getTime() + minute * 60_000)
+    return { state: stateAt(iss, date)!, sun: sunDirectionScene(date) }
+  })
+
+  it('a lo largo de un día pasa por la luz y por la sombra de la Tierra, más tiempo al sol', () => {
+    const lit = samples.filter((s) => s.state.sunlight > 0.99).length
+    const dark = samples.filter((s) => s.state.sunlight < 0.01).length
+    expect(dark).toBeGreaterThan(0)
+    expect(lit / samples.length).toBeGreaterThan(0.5)
+    expect(lit / samples.length).toBeLessThan(0.85)
+  })
+
+  it('solo está en la sombra completa cuando está en el lado de noche de la Tierra', () => {
+    for (const { state, sun } of samples.filter((s) => s.state.sunlight < 0.01)) {
+      expect(state.scene[0] * sun[0] + state.scene[1] * sun[1] + state.scene[2] * sun[2]).toBeLessThan(0)
+    }
+  })
+
+  it('siempre está entre 0 y 1', () => {
+    for (const { state } of samples) {
+      expect(state.sunlight).toBeGreaterThanOrEqual(0)
+      expect(state.sunlight).toBeLessThanOrEqual(1)
+    }
   })
 })
 

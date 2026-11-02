@@ -1,13 +1,12 @@
-import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments } from 'three'
+import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments, MathUtils } from 'three'
 import { GRATICULE_RADIUS } from './config'
 
 const GRATICULE_STEP_DEG = 15
 const GRATICULE_SEGMENTS = 96
-const toRad = Math.PI / 180
 
 const point = (latDeg: number, lonDeg: number, radius: number): [number, number, number] => {
-  const lat = latDeg * toRad
-  const lon = lonDeg * toRad
+  const lat = latDeg * MathUtils.DEG2RAD
+  const lon = lonDeg * MathUtils.DEG2RAD
   return [radius * Math.cos(lat) * Math.cos(lon), radius * Math.sin(lat), -radius * Math.cos(lat) * Math.sin(lon)]
 }
 

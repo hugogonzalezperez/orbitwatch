@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sceneToTeme, temeToScene } from '../../src/shared/frames'
+import { temeToScene } from '../../src/shared/frames'
 
 const expectVec = (actual: number[], expected: number[]) => expected.forEach((v, i) => expect(actual[i]).toBeCloseTo(v, 12))
 
@@ -11,10 +11,6 @@ describe('frames', () => {
 
   it('el eje Y de TEME (90° este) cae en −Z, como la rejilla y la textura', () => {
     expectVec(temeToScene(0, 1, 0), [0, 0, -1])
-  })
-
-  it('la ida y la vuelta devuelven el mismo vector', () => {
-    expectVec(sceneToTeme(...temeToScene(1234.5, -678.9, 42)), [1234.5, -678.9, 42])
   })
 
   it('conserva la orientación: no es un espejo (producto mixto +1)', () => {

@@ -11,7 +11,7 @@ interface LoopControls {
   addEventListener(type: 'change', listener: () => void): void
 }
 
-export interface RenderLoop {
+interface RenderLoop {
   /** Pide dibujar en el próximo fotograma. Hay que llamarla al cambiar algo de la escena que no sea la cámara. */
   invalidate(): void
   dispose(): void

@@ -1,7 +1,7 @@
 import type { OMMJsonObject } from 'satellite.js'
 
-export type OmmRecord = OMMJsonObject
-export const ISS_NORAD_ID = 25544
+export type OmmRecord = OMMJsonObject & { NORAD_CAT_ID: number }
+const ISS_NORAD_ID = 25544
 
 const NUMERIC_FIELDS = [
   'NORAD_CAT_ID',
@@ -26,10 +26,9 @@ export function findIss(json: unknown): OmmRecord {
       throw new Error(`${field} de la ISS no es un número`)
     }
   }
-  if (typeof record.EPOCH !== 'string' || Number.isNaN(epochDate(record as OmmRecord).getTime())) {
-    throw new Error('EPOCH de la ISS no es una fecha')
-  }
-  return record as OmmRecord
+  const iss = record as OmmRecord
+  if (typeof iss.EPOCH !== 'string' || Number.isNaN(epochDate(iss).getTime())) throw new Error('EPOCH de la ISS no es una fecha')
+  return iss
 }
 
 /** CelesTrak da la época sin zona horaria: es UTC. */

@@ -9,3 +9,5 @@ export const RewindIcon = () => <Icon d="M8 3 1.5 8 8 13Zm6.5 0L8 8l6.5 5Z" />
 export const ForwardIcon = () => <Icon d="M8 3l6.5 5L8 13Zm-6.5 0L8 8l-6.5 5Z" />
 export const PauseIcon = () => <Icon d="M4 3h3v10H4Zm5 0h3v10H9Z" />
 export const PlayIcon = () => <Icon d="M4.5 2.5 13 8l-8.5 5.5Z" />
+export const CloseIcon = () => <Icon d="M3.7 2.3 8 6.6l4.3-4.3 1.4 1.4L9.4 8l4.3 4.3-1.4 1.4L8 9.4l-4.3 4.3-1.4-1.4L6.6 8 2.3 3.7Z" />
+export const ChevronLeftIcon = () => <Icon d="M10.5 2.5 11.9 4 7.9 8l4 4-1.4 1.5L5 8Z" />

@@ -21,6 +21,10 @@ node -e '
   if (!Array.isArray(d) || !d.some((o) => o.NORAD_CAT_ID === 25544)) throw new Error("la respuesta no tiene la ISS")
 ' "$TMP"
 
+# El manifiesto guarda cuándo se descargó, que no es lo mismo que la época de los elementos.
+MANIFEST="$(dirname "$OUT")/manifest.json"
+printf '{\n  "schemaVersion": 1,\n  "generatedAt": "%s",\n  "source": "celestrak.org GROUP=stations"\n}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >"$MANIFEST"
+
 mv "$TMP" "$OUT"
 trap - EXIT
-echo "Escrito $OUT ($(wc -c <"$OUT") bytes)"
+echo "Escrito $OUT ($(wc -c <"$OUT") bytes) y $MANIFEST"
