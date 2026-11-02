@@ -1,5 +1,6 @@
 import type { OmmRecord } from '../data/omm'
-import { createTracked, sceneAt, type Tracked } from './position'
+import type { Sample } from './batch'
+import { createTransport as createDefaultTransport, type PropagationTransport } from './transport'
 
 export interface SwarmGroup {
   /** Identificador del grupo (la categoría), para ocultarlo. */
@@ -11,71 +12,150 @@ export interface SwarmGroup {
   opacity?: number
 }
 
-export interface SwarmFrame {
-  /** Tripletas x,y,z en la escena (radios terrestres); solo valen las `count` primeras. */
-  positions: Float32Array
-  /** Cuartetos r,g,b,opacidad alineados con `positions`. Una opacidad mayor que 1 pide dibujar el punto más grande. */
-  colors: Float32Array
-  /** Número de catálogo de cada posición. */
-  ids: Uint32Array
-  count: number
-}
-
-export interface Swarm {
-  update(date: Date): SwarmFrame
-  /** Atenúa los que no están en `ids`; `null` los devuelve a todos a su opacidad. Se nota en el siguiente `update`. */
-  setHighlight(ids: ReadonlySet<number> | null): void
-  /** Los grupos de `ids` no se calculan ni se dibujan. Se nota en el siguiente `update`. */
-  setHidden(ids: ReadonlySet<string>): void
-}
+/** Segundos de tiempo simulado tras los que se pide una muestra nueva: con la velocidad, el error de extrapolar es de unos 0,4 km en órbita baja. */
+export const REFRESH_SECONDS = 10
+/** Mientras llega una muestra nueva (un salto de hora), los puntos no se extrapolan más allá de esto: se quedan quietos, no salen disparados. */
+export const MAX_EXTRAPOLATION_SECONDS = 60
 
 const DIMMED_OPACITY = 0.12 // se sigue viendo dónde hay satélites, pero no compiten con los resaltados
 const EMPHASIZED = 2 // la opacidad no pasa de 1: este valor solo le dice al shader que agrande el punto
 const EMPHASIS_MAX = 500 // con más coincidencias, agrandarlas todas sería ruido: solo se atenúa el resto
+const FAR = 1e6 // posición de lo que no se ve: fuera de cualquier encuadre y de la zona de selección
 
-/** Muchos satélites sin estado propio: solo posición, color de grupo y opacidad. Los buffers se reutilizan en cada llamada. */
-export function createSwarm(groups: SwarmGroup[]): Swarm {
+export function needsRefresh({ simMs, epochMs, inFlight }: { simMs: number; epochMs: number | null; inFlight: boolean }): boolean {
+  if (inFlight) return false
+  return epochMs === null || Math.abs(simMs - epochMs) >= REFRESH_SECONDS * 1000
+}
+
+/** Segundos que el shader suma a la velocidad para llegar a `simMs` desde la muestra, acotados. */
+export function extrapolationSeconds(simMs: number, epochMs: number): number {
+  return Math.max(-MAX_EXTRAPOLATION_SECONDS, Math.min(MAX_EXTRAPOLATION_SECONDS, (simMs - epochMs) / 1000))
+}
+
+export interface Swarm {
+  /** Número de huecos: uno por satélite, siempre en el mismo orden. */
+  readonly size: number
+  /** Número de catálogo de cada hueco. */
+  readonly ids: Uint32Array
+  /** Cuartetos r, g, b, opacidad por hueco. Una opacidad mayor que 1 pide dibujar el punto más grande; 0, no dibujarlo. */
+  readonly colors: Float32Array
+  /** Cambia cada vez que cambian los colores, para saber cuándo volver a subirlos a la GPU. */
+  colorsVersion(): number
+  /** Pide una muestra nueva si la hora simulada se ha alejado de la vigente. No espera: avisa con `onSample` al llegar. */
+  update(simMs: number): void
+  /** La muestra vigente, o `null` hasta que llegue la primera. */
+  sample(): Sample | null
+  /** Satélites que SGP4 pudo calcular en la muestra vigente. */
+  validCount(): number
+  /** Milisegundos que tardó en llegar la última muestra. */
+  latencyMs(): number
+  /** Posiciones extrapoladas a `simMs` (tripletas, un hueco cada una); lo inválido y lo oculto, lejos. */
+  positionsAt(simMs: number, out: Float32Array): void
+  /** Atenúa los que no están en `ids`; `null` los devuelve a su opacidad base. */
+  setHighlight(ids: ReadonlySet<number> | null): void
+  /** Los grupos de `ids` no se dibujan. */
+  setHidden(ids: ReadonlySet<string>): void
+  dispose(): void
+}
+
+interface Options {
+  /** Cómo se calculan los satélites; por defecto, en un Worker si hay. */
+  createTransport?: (records: OmmRecord[]) => PropagationTransport
+  /** Se llama cuando llega una muestra nueva. */
+  onSample?: () => void
+}
+
+/** Muchos satélites sin estado propio: el cálculo va en un Worker y entre muestras se extrapola con la velocidad. */
+export function createSwarm(groups: SwarmGroup[], { createTransport = createDefaultTransport, onSample }: Options = {}): Swarm {
   const seen = new Set<number>()
-  const members: Array<{ id: number; group: string; tracked: Tracked; rgb: SwarmGroup['rgb']; base: number; opacity: number }> = []
-  for (const { id: group, records, rgb, opacity = 1 } of groups) {
-    for (const record of records) {
+  const records: OmmRecord[] = []
+  const slotGroup: SwarmGroup[] = []
+  for (const group of groups) {
+    for (const record of group.records) {
       if (seen.has(record.NORAD_CAT_ID)) continue // un objeto en dos grupos solo cuenta en el primero
       seen.add(record.NORAD_CAT_ID)
-      members.push({ id: record.NORAD_CAT_ID, group, tracked: createTracked(record), rgb, base: opacity, opacity })
+      records.push(record)
+      slotGroup.push(group)
     }
   }
-  const frame: SwarmFrame = {
-    positions: new Float32Array(members.length * 3),
-    colors: new Float32Array(members.length * 4),
-    ids: new Uint32Array(members.length),
-    count: 0,
-  }
+  const size = records.length
+  const ids = Uint32Array.from(records, (r) => r.NORAD_CAT_ID)
+  const colors = new Float32Array(size * 4)
+  const visible = new Uint8Array(size)
   let hidden: ReadonlySet<string> = new Set()
+  let highlight: ReadonlySet<number> | null = null
+  let version = 0
+
+  const recolor = () => {
+    const emphasize = highlight !== null && highlight.size <= EMPHASIS_MAX
+    for (let i = 0; i < size; i++) {
+      const { id, rgb, opacity = 1 } = slotGroup[i]!
+      const shown = !hidden.has(id)
+      visible[i] = shown ? 1 : 0
+      colors.set(rgb, i * 4)
+      colors[i * 4 + 3] = !shown ? 0 : highlight === null ? opacity : highlight.has(ids[i]!) ? (emphasize ? EMPHASIZED : opacity) : DIMMED_OPACITY
+    }
+    version++
+  }
+  recolor()
+
+  const transport = createTransport(records)
+  let current: Sample | null = null
+  let valid = 0
+  let inFlight = false
+  let latency = 0
+  let disposed = false
 
   return {
-    update(date) {
-      let count = 0
-      for (const { id, group, tracked, rgb, opacity } of members) {
-        if (hidden.has(group)) continue
-        const scene = sceneAt(tracked, date)
-        if (!scene) continue // SGP4 no puede calcularlo (por ejemplo, órbita decaída): se omite
-        frame.positions.set(scene, count * 3)
-        frame.colors.set(rgb, count * 4)
-        frame.colors[count * 4 + 3] = opacity
-        frame.ids[count] = id
-        count++
-      }
-      frame.count = count
-      return frame
+    size,
+    ids,
+    colors,
+    colorsVersion: () => version,
+    update(simMs) {
+      if (!needsRefresh({ simMs, epochMs: current?.epochMs ?? null, inFlight })) return
+      inFlight = true
+      const started = performance.now()
+      transport
+        .request(simMs)
+        .then((sample) => {
+          inFlight = false
+          if (disposed) return
+          current = sample
+          valid = sample.valid.reduce((n, v) => n + v, 0)
+          latency = performance.now() - started
+          onSample?.()
+        })
+        .catch((error: unknown) => {
+          inFlight = false
+          console.error('No se pudo calcular la posición de los satélites', error)
+        })
     },
-    setHighlight(ids) {
-      const emphasize = ids !== null && ids.size <= EMPHASIS_MAX
-      for (const member of members) {
-        member.opacity = ids === null ? member.base : ids.has(member.id) ? (emphasize ? EMPHASIZED : member.base) : DIMMED_OPACITY
+    sample: () => current,
+    validCount: () => valid,
+    latencyMs: () => latency,
+    positionsAt(simMs, out) {
+      if (!current) {
+        out.fill(FAR)
+        return
+      }
+      const { positions, velocities, valid: ok, epochMs } = current
+      const dt = extrapolationSeconds(simMs, epochMs)
+      for (let i = 0; i < size; i++) {
+        const show = ok[i] === 1 && visible[i] === 1
+        for (let k = 0; k < 3; k++) out[i * 3 + k] = show ? positions[i * 3 + k]! + velocities[i * 3 + k]! * dt : FAR
       }
     },
-    setHidden(ids) {
-      hidden = ids
+    setHighlight(next) {
+      highlight = next
+      recolor()
+    },
+    setHidden(next) {
+      hidden = next
+      recolor()
+    },
+    dispose() {
+      disposed = true
+      transport.dispose()
     },
   }
 }

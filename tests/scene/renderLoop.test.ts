@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createRenderLoop } from '../../src/scene/renderLoop'
 
 // Controles falsos: como OrbitControls, `update()` solo avisa con 'change' cuando la cámara se movió.
-const setup = (onFrame?: () => void) => {
+const setup = (onFrame?: () => void, onRender?: (ms: number) => void) => {
   const listeners: Array<() => void> = []
   let tick: (() => void) | null = null
   let renders = 0
@@ -15,7 +15,7 @@ const setup = (onFrame?: () => void) => {
     update: () => undefined,
     addEventListener: (_type: 'change', listener: () => void) => void listeners.push(listener),
   }
-  const loop = createRenderLoop(renderer, new Scene(), new PerspectiveCamera(), controls, onFrame)
+  const loop = createRenderLoop(renderer, new Scene(), new PerspectiveCamera(), controls, onFrame, onRender)
   return {
     loop,
     frame: () => tick?.(),
@@ -77,5 +77,17 @@ describe('createRenderLoop', () => {
     expect(t.isRunning()).toBe(true)
     t.loop.dispose()
     expect(t.isRunning()).toBe(false)
+  })
+
+  it('avisa con lo que tardó cada dibujo, y solo cuando dibuja', () => {
+    const durations: number[] = []
+    const t = setup(undefined, (ms) => durations.push(ms))
+    t.frame()
+    t.frame() // no dibuja
+    expect(durations).toHaveLength(1)
+    expect(durations[0]).toBeGreaterThanOrEqual(0)
+    t.loop.invalidate()
+    t.frame()
+    expect(durations).toHaveLength(2)
   })
 })

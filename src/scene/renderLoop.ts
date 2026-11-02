@@ -17,13 +17,17 @@ interface RenderLoop {
   dispose(): void
 }
 
-/** Dibuja solo cuando algo cambia: un globo quieto no gasta GPU. `onFrame` corre en cada fotograma, dibuje o no. */
+/**
+ * Dibuja solo cuando algo cambia: un globo quieto no gasta GPU. `onFrame` corre en cada fotograma, dibuje o no;
+ * `onRender` recibe los ms de CPU que costó cada dibujo (preparar y enviar las órdenes, no lo que tarda la GPU).
+ */
 export function createRenderLoop(
   renderer: LoopRenderer,
   scene: Scene,
   camera: PerspectiveCamera,
   controls: LoopControls,
   onFrame?: () => void,
+  onRender?: (cpuMs: number) => void,
 ): RenderLoop {
   let dirty = true
   const invalidate = () => {
@@ -38,7 +42,9 @@ export function createRenderLoop(
     if (!dirty) return
     dirty = false
     updateClipPlanes(camera)
+    const started = onRender ? performance.now() : 0
     renderer.render(scene, camera)
+    onRender?.(performance.now() - started)
   })
 
   return { invalidate, dispose: () => renderer.setAnimationLoop(null) }

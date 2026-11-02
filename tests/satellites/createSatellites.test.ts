@@ -1,4 +1,4 @@
-import type { WebGLRenderer } from 'three'
+import { PerspectiveCamera, type WebGLRenderer } from 'three'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSatellites, ISS_ID } from '../../src/satellites/createSatellites'
 import { epochDate } from '../../src/satellites/data/omm'
@@ -124,3 +124,48 @@ describe('createSatellites: selección', () => {
     satellites.dispose()
   })
 })
+
+describe('createSatellites: elegir bajo el puntero', () => {
+  /** Con la muestra calculada y la cámara fuera de la Tierra mirando a la ISS, que queda en el centro de la imagen. */
+  const lookingAtIss = async () => {
+    let arrived: () => void = () => {}
+    const sample = new Promise<void>((resolve) => (arrived = resolve))
+    serve(FILES)
+    const satellites = createSatellites(renderer, { onChange: () => {}, onSwarm: () => arrived() })
+    await vi.waitFor(() => expect(satellites.data.get().kind).toBe('ready'))
+    satellites.update(oneHourAfterEpoch)
+    await sample
+    satellites.select(ISS_ID)
+    satellites.update(oneHourAfterEpoch)
+    const camera = new PerspectiveCamera(45, 1, 0.1, 100)
+    camera.position.copy(satellites.selectedPosition()!.multiplyScalar(4))
+    camera.lookAt(0, 0, 0)
+    camera.updateMatrixWorld()
+    return { satellites, camera }
+  }
+
+  it('el satélite en el centro de la imagen es el que se elige, con su número de catálogo', async () => {
+    const { satellites, camera } = await lookingAtIss()
+    expect(satellites.pick(camera, 800, 800, 400, 400)).toBe(ISS_ID)
+    expect(satellites.pick(camera, 800, 800, 10, 10)).toBeNull()
+    satellites.dispose()
+  })
+
+  it('las categorías ocultas no se pueden elegir (aquí hay otras naves en la misma órbita), y al mostrarlas vuelven', async () => {
+    const { satellites, camera } = await lookingAtIss()
+    satellites.setHiddenCategories(new Set(['stations']))
+    expect(satellites.pick(camera, 800, 800, 400, 400)).not.toBe(ISS_ID) // lo que queda de la otra categoría, que va con la ISS
+    satellites.setHiddenCategories(new Set(['stations', 'weather']))
+    expect(satellites.pick(camera, 800, 800, 400, 400)).toBeNull()
+    satellites.setHiddenCategories(new Set())
+    expect(satellites.pick(camera, 800, 800, 400, 400)).toBe(ISS_ID)
+    satellites.dispose()
+  })
+
+  it('el estado del cálculo cuenta los satélites del enjambre y cuántos calculó SGP4', async () => {
+    const { satellites } = await lookingAtIss()
+    expect(satellites.swarmStats()).toMatchObject({ size: 20, valid: 20 })
+    satellites.dispose()
+  })
+})
+

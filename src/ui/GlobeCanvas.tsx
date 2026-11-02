@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createEngine, type Engine } from '../app/engine'
+import { isPerfEnabled } from '../app/perf'
 import { parseStartTime } from '../app/startTime'
 
 const WEBGL_ERROR =
@@ -12,7 +13,7 @@ export function GlobeCanvas({ onEngine }: { onEngine: (engine: Engine | null) =>
   useEffect(() => {
     let engine: Engine
     try {
-      engine = createEngine(ref.current!, { startTime: parseStartTime(window.location.search) })
+      engine = createEngine(ref.current!, { startTime: parseStartTime(window.location.search), perf: isPerfEnabled(window.location.search) })
     } catch (error) {
       console.error(error)
       setFailed(true) // normalmente: el navegador no puede crear un contexto WebGL

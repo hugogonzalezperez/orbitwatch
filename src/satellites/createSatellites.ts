@@ -10,7 +10,8 @@ import { parseManifest } from './data/manifest'
 import { parseOmmList, epochDate, type OmmRecord } from './data/omm'
 import { currentRevolution, orbitProgress, sampleOrbit, type Revolution } from './propagation/orbit'
 import { createTracked, stateAt, type SatelliteState, type Tracked } from './propagation/position'
-import { createSwarm, type Swarm, type SwarmFrame } from './propagation/swarm'
+import { sunDirectionScene } from '../shared/sun'
+import { createSwarm, extrapolationSeconds, type Swarm } from './propagation/swarm'
 import { createOrbitLine } from './render/orbitLine'
 import { createSatellitePoints } from './render/satellitePoints'
 import { createSwarmPoints } from './render/swarmPoints'
@@ -47,6 +48,16 @@ export interface SelectedInfo {
   orbit: Revolution | null
 }
 
+export interface SwarmStats {
+  /** Satélites del enjambre y los que SGP4 pudo calcular. */
+  size: number
+  valid: number
+  /** Segundos de tiempo simulado desde la muestra vigente hasta la hora mostrada. */
+  elapsedSeconds: number
+  /** Milisegundos que tardó en llegar la última muestra. */
+  latencyMs: number
+}
+
 interface Satellites {
   object: Group
   data: Store<DataStatus>
@@ -57,6 +68,8 @@ interface Satellites {
   setHighlight(ids: ReadonlySet<number> | null): void
   /** El satélite visible más cercano al puntero (píxeles CSS dentro del lienzo), o `null`. */
   pick(camera: PerspectiveCamera, width: number, height: number, x: number, y: number): SatelliteId | null
+  /** Estado del cálculo del enjambre, para el medidor de rendimiento; `null` hasta que hay datos. */
+  swarmStats(): SwarmStats | null
   /** Nombre de un satélite del catálogo, o `null` si no existe. */
   nameOf(id: SatelliteId): string | null
   /** Los grupos de `ids` (categorías) no se dibujan en el globo. */
@@ -67,8 +80,7 @@ interface Satellites {
   selectedPosition(): Vector3 | null
   /** Dirección unitaria perpendicular al plano de la órbita del seleccionado (posición × velocidad), o `null`. */
   selectedOrbitNormal(): Vector3 | null
-  /** `swarm: false` omite el enjambre (miles de órbitas) y deja sus posiciones como estaban. */
-  update(date: Date, options?: { swarm?: boolean }): void
+  update(date: Date): void
   dispose(): void
 }
 
@@ -95,7 +107,10 @@ const toRgb = (hex: number): [number, number, number] => {
   return [r, g, b]
 }
 
-export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChange: () => void }): Satellites {
+export function createSatellites(
+  renderer: WebGLRenderer,
+  { onChange, onSwarm }: { onChange: () => void; onSwarm?: () => void },
+): Satellites {
   const marker = createSatellitePoints(renderer, 1, { color: SATELLITE_COLOR, ringColor: SELECTION_COLOR, sizePx: SATELLITE_SIZE_PX })
   const orbitLine = createOrbitLine(SATELLITE_COLOR)
   const object = new Group().add(marker.object, orbitLine.object)
@@ -104,7 +119,9 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
 
   let swarm: Swarm | undefined
   let swarmPoints: ReturnType<typeof createSwarmPoints> | undefined
-  let frame: SwarmFrame | undefined
+  let pickPositions = new Float32Array(0)
+  let uploadedColors = -1
+  let lastTime = 0 // la última hora simulada con la que se actualizó, para elegir bajo el puntero
   let catalog: CatalogEntry[] = []
   const records = new Map<SatelliteId, OmmRecord>()
   const names = new Map<SatelliteId, string>()
@@ -146,13 +163,21 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
       catalog = buildCatalog(groups)
       for (const entry of catalog) names.set(entry.id, entry.name)
       for (const { records: list } of groups) for (const record of list) if (!records.has(record.NORAD_CAT_ID)) records.set(record.NORAD_CAT_ID, record)
-      swarm = createSwarm(
+      const created = createSwarm(
         groups.map((g) => {
           const { color, opacity } = getCategory(g.name)
           return { id: g.name, records: g.records, rgb: toRgb(color), opacity }
         }),
+        {
+          onSample: () => {
+            swarmPoints?.setSample(created.sample()!)
+            onSwarm?.()
+          },
+        },
       )
-      swarmPoints = createSwarmPoints(renderer, records.size, SWARM_SIZE_PX)
+      swarm = created
+      swarmPoints = createSwarmPoints(renderer, created.size, SWARM_SIZE_PX)
+      pickPositions = new Float32Array(created.size * 3)
       object.add(swarmPoints.object)
       data.set({ kind: 'ready', catalog, downloadedAt })
       onChange()
@@ -193,21 +218,35 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
       }
     },
     setHighlight: (ids) => swarm?.setHighlight(ids),
+    swarmStats() {
+      const sample = swarm?.sample()
+      return swarm && sample
+        ? { size: swarm.size, valid: swarm.validCount(), elapsedSeconds: (lastTime - sample.epochMs) / 1000, latencyMs: swarm.latencyMs() }
+        : null
+    },
     nameOf: (id) => names.get(id) ?? null,
     setHiddenCategories: (ids) => swarm?.setHidden(ids),
     selectedOrbitRadius: () => (tracked ? (describeOrbit(tracked.record).apogeeKm + EARTH_EQUATORIAL_KM) / EARTH_RADIUS_KM : null),
     pick(camera, width, height, x, y) {
-      if (!frame) return null
-      const index = pickNearest(frame.positions, frame.count, camera, width, height, x, y, SWARM_HIT_RADIUS_PX)
-      return index === -1 ? null : frame.ids[index]!
+      if (!swarm) return null
+      swarm.positionsAt(lastTime, pickPositions)
+      const index = pickNearest(pickPositions, swarm.size, camera, width, height, x, y, SWARM_HIT_RADIUS_PX)
+      return index === -1 ? null : swarm.ids[index]!
     },
     selectedPosition: () => (state ? new Vector3(...state.scene) : null),
     selectedOrbitNormal: () =>
       state ? new Vector3(...state.scene).cross(new Vector3(...state.velocity)).normalize() : null,
-    update(date, { swarm: updateSwarm = true } = {}) {
-      if (updateSwarm && swarm && swarmPoints) {
-        frame = swarm.update(date)
-        swarmPoints.setFrame(frame.positions, frame.colors, frame.count)
+    update(date) {
+      lastTime = date.getTime()
+      if (swarm && swarmPoints) {
+        swarm.update(lastTime)
+        if (swarm.colorsVersion() !== uploadedColors) {
+          swarmPoints.setColors(swarm.colors)
+          uploadedColors = swarm.colorsVersion()
+        }
+        const sample = swarm.sample()
+        if (sample) swarmPoints.setElapsed(extrapolationSeconds(lastTime, sample.epochMs))
+        swarmPoints.setSun(sunDirectionScene(date))
       }
       if (!tracked) return
       state = stateAt(tracked, date)
@@ -222,6 +261,7 @@ export function createSatellites(renderer: WebGLRenderer, { onChange }: { onChan
     },
     dispose() {
       disposed = true
+      swarm?.dispose()
       clearTimeout(timer)
     },
   }
