@@ -80,7 +80,7 @@ Resumen; el detalle y los motivos, en la documentación.
 
 ## Pendiente
 
-SATCAT (país, tipo y fecha de lanzamiento), descarga y despliegue automáticos, cribado de acercamientos entre objetos con su benchmark, país y propietario de cada satélite, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
+SATCAT (país, tipo y fecha de lanzamiento), activar el despliegue automático (preparado en `.github/workflows/deploy.yml`), cribado de acercamientos entre objetos con su benchmark, país y propietario de cada satélite, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
 
 ## Licencia y créditos
 
