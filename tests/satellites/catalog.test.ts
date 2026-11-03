@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { getCategory } from '../../src/satellites/categories'
-import { buildCatalog, groupByCategory, normalize, rankResults, searchEntries } from '../../src/satellites/catalog'
+import { buildCatalog, countByOwner, groupByCategory, normalize, rankResults, searchEntries } from '../../src/satellites/catalog'
 import { encodeColumns } from '../../src/satellites/data/columns'
 import type { OmmRecord } from '../../src/satellites/data/omm'
-import { stationRecords } from '../helpers/fixtures'
+import { classified, stationRecords } from '../helpers/fixtures'
 
 const record = (id: number, name: string, designator = '2020-001A'): OmmRecord => ({ ...stationRecords()[0]!, NORAD_CAT_ID: id, OBJECT_NAME: name, OBJECT_ID: designator })
 
 /** El catálogo de unas categorías con sus registros. */
 const catalogOf = (groups: Array<{ name: string; records: OmmRecord[] }>) =>
-  buildCatalog(encodeColumns(groups.flatMap((g) => g.records.map((r) => ({ record: r, category: g.name })))))
+  buildCatalog(encodeColumns(groups.flatMap((g) => g.records.map((r) => classified(r, g.name)))))
 
 const catalog = catalogOf([
   { name: 'starlink', records: [record(3, 'STARLINK-1234'), record(1, 'STARLINK-30')] },
@@ -37,6 +37,33 @@ describe('buildCatalog', () => {
 
   it('un nombre vacío se muestra con su número de catálogo', () => {
     expect(catalogOf([{ name: 'weather', records: [record(99, '')] }])[0]!.name).toBe('Sin nombre (99)')
+  })
+})
+
+describe('propietario', () => {
+  const owned = buildCatalog(
+    encodeColumns([
+      classified(record(1, 'COSMOS 2385'), 'military', { owner: 'CIS' }),
+      classified(record(2, 'COSMOS 2386'), 'military', { owner: 'CIS' }),
+      classified(record(3, 'NOAA 19'), 'weather', { owner: 'US' }),
+      classified(record(4, 'FENGYUN 3A'), 'weather', { owner: 'PRC' }),
+    ]),
+  )
+
+  it('cada entrada lleva su código de propietario', () => {
+    expect(owned.find((e) => e.id === 3)!.owner).toBe('US')
+  })
+
+  it('el propietario no entra en la búsqueda por texto: «ado» no trae a todos los de Estados Unidos', () => {
+    expect(searchEntries(owned, 'ado')).toEqual([])
+  })
+
+  it('cuenta por propietario: primero los que más tienen, con su nombre en español', () => {
+    expect(countByOwner(owned)).toEqual([
+      { owner: 'CIS', name: 'Rusia y antigua URSS', count: 2 },
+      { owner: 'PRC', name: 'China', count: 1 },
+      { owner: 'US', name: 'Estados Unidos', count: 1 },
+    ])
   })
 })
 

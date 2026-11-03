@@ -73,6 +73,13 @@ button.primary:hover:not(:disabled) { background: #85b8ee; }
 .result-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 1rem var(--serif); text-align: left; }
 .result-id { font-size: 0.8125rem; color: var(--ink-dim); }
 
+.owner-filter { display: grid; gap: 0.25rem; }
+.owner-filter label { font-size: 0.8125rem; color: var(--ink-dim); }
+.owner-filter select {
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 0.75rem; font: inherit; color: var(--ink);
+  background-color: var(--field); border: 1px solid var(--line); border-radius: var(--radius);
+}
+
 .swatch { flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--swatch); }
 .swatch-off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--swatch); } /* oculta: hueco, no solo más apagado */
 
@@ -109,12 +116,14 @@ button.primary:hover:not(:disabled) { background: #85b8ee; }
 .card-where { font-size: 1rem; }
 .card-sun { font-size: 0.875rem; color: var(--ink-dim); }
 .figures { margin-top: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.figures dt, .facts dt, .detail dt { font-size: 0.8125rem; color: var(--ink-dim); }
+.figures dt, .facts dt, .detail dt, .origin dt { font-size: 0.8125rem; color: var(--ink-dim); }
 .figures dd { font: 600 1.75rem/1.1 var(--sans); }
 .unit { font-size: 0.875rem; font-weight: 400; color: var(--ink-dim); }
 .card h3 { font: 600 1.0625rem/1.3 var(--sans); }
 .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.25rem; }
 .facts dd { font-weight: 500; }
+.origin { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
+.origin dd { overflow-wrap: anywhere; }
 .reliability { font-size: 0.9375rem; }
 .card details { font-size: 0.875rem; }
 .card summary { display: flex; align-items: center; min-height: 32px; cursor: pointer; color: var(--ink-dim); }

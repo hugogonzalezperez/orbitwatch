@@ -8,10 +8,11 @@ import { escapeAction } from './searchKeys'
 
 const MAX_RESULTS = 8
 
-/** Buscador con desplegable: se abre al escribir, se maneja con el teclado y se enfoca con «/». */
-export function Search({ engine }: { engine: Engine }) {
+/** Buscador con desplegable: se abre al escribir, se maneja con el teclado y se enfoca con «/». Solo busca entre los de `owner`, si hay uno. */
+export function Search({ engine, owner }: { engine: Engine; owner: string }) {
   const data = useStore(engine.data)
-  const catalog = data.kind === 'ready' ? data.catalog : null
+  const all = data.kind === 'ready' ? data.catalog : null
+  const catalog = useMemo(() => (all && owner ? all.filter((e) => e.owner === owner) : all), [all, owner])
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -19,11 +20,12 @@ export function Search({ engine }: { engine: Engine }) {
   const listId = useId()
   const deferred = useDeferredValue(query)
   const searching = deferred.trim() !== ''
+  const narrowing = searching || owner !== '' // con un país elegido, el globo atenúa lo que no es suyo aunque no se escriba nada
 
   const results = useMemo(() => (catalog ? rankResults(catalog, deferred, MAX_RESULTS) : []), [catalog, deferred])
-  const matches = useMemo(() => (catalog && searching ? searchEntries(catalog, deferred) : []), [catalog, deferred, searching])
+  const matches = useMemo(() => (catalog && narrowing ? searchEntries(catalog, deferred) : []), [catalog, deferred, narrowing])
 
-  // El globo atenúa lo que no coincide con lo escrito. (`matches` está vacío si no se busca nada.)
+  // El globo atenúa lo que no coincide con lo escrito ni con el país. (`matches` está vacío si no hay nada que filtrar.)
   useEffect(() => engine.setHighlight(matches.length > 0 ? new Set(matches.map((e) => e.id)) : null), [engine, matches]) // sin coincidencias no se atenúa nada: parecería que el globo se vacía
   useEffect(() => () => engine.setHighlight(null), [engine])
 
@@ -77,8 +79,8 @@ export function Search({ engine }: { engine: Engine }) {
         aria-autocomplete="list"
         aria-activedescendant={expanded && results[active] ? `${listId}-${results[active].id}` : undefined}
         aria-label="Buscar satélite por nombre o número NORAD"
-        placeholder={catalog || data.kind === 'error' ? 'Buscar: ISS, GOES 16, 25544…' : 'Cargando satélites…'}
-        disabled={!catalog}
+        placeholder={all || data.kind === 'error' ? 'Buscar: ISS, GOES 16, 25544…' : 'Cargando satélites…'}
+        disabled={!all}
         value={query}
         autoComplete="off"
         spellCheck={false}
@@ -91,7 +93,7 @@ export function Search({ engine }: { engine: Engine }) {
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
       />
-      {!query && catalog && <kbd className="search-hint" aria-hidden="true">/</kbd>}
+      {!query && all && <kbd className="search-hint" aria-hidden="true">/</kbd>}
       <ul id={listId} role="listbox" aria-label="Resultados" className="results" hidden={!expanded}>
         {results.map((entry, index) => (
           <li

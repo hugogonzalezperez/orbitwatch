@@ -6,6 +6,7 @@ import { formatInteger, formatSpan } from './format'
 import { GlobeCanvas } from './GlobeCanvas'
 import { useNow, useStore } from './hooks'
 import { Legend } from './Legend'
+import { OwnerFilter } from './OwnerFilter'
 import { Search } from './Search'
 import { SelectedCard } from './SelectedCard'
 
@@ -40,6 +41,7 @@ function SelectionAnnouncer({ engine }: { engine: Engine }) {
 
 export function App() {
   const [engine, setEngine] = useState<Engine | null>(null)
+  const [owner, setOwner] = useState('')
   const onEngine = useCallback((next: Engine | null) => setEngine(next), [])
 
   // Esc cierra la ficha, salvo que el buscador lo haya usado ya (para cerrar su desplegable o borrar lo escrito).
@@ -59,8 +61,9 @@ export function App() {
         <>
           <aside className="rail" aria-label="Búsqueda y categorías">
             <Brand engine={engine} />
-            <Search engine={engine} />
-            <Legend engine={engine} />
+            <Search engine={engine} owner={owner} />
+            <OwnerFilter engine={engine} value={owner} onChange={setOwner} />
+            <Legend engine={engine} owner={owner} />
           </aside>
           <SelectionAnnouncer engine={engine} />
           <SelectedCard selected={engine.selected} clock={engine.clock} onClose={() => engine.select(null)} onCenter={engine.focusSelected} />

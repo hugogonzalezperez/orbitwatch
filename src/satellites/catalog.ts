@@ -1,5 +1,6 @@
 import { CATEGORIES, getCategory, type Category } from './categories'
 import type { CatalogColumns } from './data/columns'
+import { describeOwner } from './origin'
 
 export interface CatalogEntry {
   /** Número de catálogo NORAD. */
@@ -7,6 +8,8 @@ export interface CatalogEntry {
   name: string
   category: string
   designator: string
+  /** Código de propietario del SATCAT ("US", "PRC", "ESA"…). */
+  owner: string
   /** Texto en minúsculas y sin tildes sobre el que se busca. */
   searchKey: string
 }
@@ -31,9 +34,26 @@ export function buildCatalog(columns: CatalogColumns): CatalogEntry[] {
   const entries = columns.id.map((id, i): CatalogEntry => {
     const name = columns.name[i] || `Sin nombre (${id})`
     const designator = columns.designator[i]!
-    return { id, name, category: columns.categories[columns.category[i]!]!, designator, searchKey: normalize(`${name} ${id} ${designator}`) }
+    const owner = columns.owner[i]!
+    return {
+      id,
+      name,
+      category: columns.categories[columns.category[i]!]!,
+      designator,
+      owner,
+      searchKey: normalize(`${name} ${id} ${designator}`),
+    }
   })
   return entries.sort((a, b) => categoryRank(a.category) - categoryRank(b.category) || NAME_ORDER.compare(a.name, b.name))
+}
+
+/** Cuántos objetos tiene cada propietario, de más a menos; a igual número, por nombre. */
+export function countByOwner(entries: CatalogEntry[]): Array<{ owner: string; name: string; count: number }> {
+  const counts = new Map<string, number>()
+  for (const { owner } of entries) counts.set(owner, (counts.get(owner) ?? 0) + 1)
+  return [...counts]
+    .map(([owner, count]) => ({ owner, name: describeOwner(owner), count }))
+    .sort((a, b) => b.count - a.count || NAME_ORDER.compare(a.name, b.name))
 }
 
 /** Los que contienen todas las palabras de `query`, en cualquier orden. Sin consulta devuelve la misma lista. */

@@ -53,3 +53,21 @@ const REGIME_LABEL: Record<Regime, string> = {
   high: 'órbita alta',
 }
 export const describeRegime = (regime: Regime): string => REGIME_LABEL[regime]
+
+const LAUNCH_DATE = new Intl.DateTimeFormat('es-ES', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
+
+const plural = (count: number, one: string, many: string): string => `${count}${NBSP}${count === 1 ? one : many}`
+
+/** "24 may 2019 (hace 7 años)" a partir de la fecha del SATCAT ("2019-05-24"); `null` si no es una fecha. */
+export function formatLaunch(launch: string, now: Date): string | null {
+  const date = new Date(`${launch}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return null
+  const text = LAUNCH_DATE.format(date)
+  const days = Math.floor((now.getTime() - date.getTime()) / DAY)
+  if (days < 0) return text
+  if (days === 0) return `${text} (hoy)`
+  let months = (now.getUTCFullYear() - date.getUTCFullYear()) * 12 + now.getUTCMonth() - date.getUTCMonth()
+  if (now.getUTCDate() < date.getUTCDate()) months--
+  const age = months >= 12 ? plural(Math.floor(months / 12), 'año', 'años') : months >= 1 ? plural(months, 'mes', 'meses') : plural(days, 'día', 'días')
+  return `${text} (hace ${age})`
+}

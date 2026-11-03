@@ -5,16 +5,16 @@ import { encodeColumns } from '../../src/satellites/data/columns'
 import { catalogFileName } from '../../src/satellites/data/manifest'
 import { epochDate } from '../../src/satellites/data/omm'
 import { sha256Hex } from '../../src/shared/hash'
-import { issRecord, stationRecords } from '../helpers/fixtures'
+import { classified, issRecord, stationRecords } from '../helpers/fixtures'
 
 const renderer = { getPixelRatio: () => 1 } as unknown as WebGLRenderer
-const entries = stationRecords().map((record, i) => ({ record, category: i < 10 ? 'stations' : 'weather' }))
+const entries = stationRecords().map((record, i) => classified(record, i < 10 ? 'stations' : 'weather'))
 const catalogText = JSON.stringify(encodeColumns(entries))
 const sha256 = await sha256Hex(catalogText)
 const catalogFile = catalogFileName(sha256)
 const FILES: Record<string, string> = {
   'manifest.json': JSON.stringify({
-    schemaVersion: 3,
+    schemaVersion: 4,
     generatedAt: '2026-11-02T00:00:00Z',
     catalog: { file: catalogFile, count: 20, sha256 },
     groups: [{ group: 'stations', count: 10 }, { group: 'weather', count: 10 }],
@@ -114,6 +114,13 @@ describe('createSatellites: selección', () => {
     const info = satellites.selected.get()!
     expect(info).toMatchObject({ id: ISS_ID, name: 'ISS (ZARYA)', category: 'stations', state: null, orbit: null })
     expect(info.shape.regime).toBe('low')
+    satellites.dispose()
+  })
+
+  it('la ficha lleva el origen del SATCAT: propietario, tipo, estado y fecha de lanzamiento', async () => {
+    const satellites = await open()
+    satellites.select(ISS_ID)
+    expect(satellites.selected.get()!.origin).toEqual({ owner: 'US', type: 'PAY', status: '+', launch: '2020-01-01' })
     satellites.dispose()
   })
 

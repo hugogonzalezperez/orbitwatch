@@ -34,11 +34,21 @@ export type DataStatus =
       downloadedAt: Date
     }
 
+/** Lo que dice el SATCAT de CelesTrak: quién lo tiene, qué es, si funciona y cuándo se lanzó. */
+export interface Origin {
+  owner: string
+  type: string
+  status: string
+  /** "2019-05-24". */
+  launch: string
+}
+
 export interface SelectedInfo {
   id: SatelliteId
   name: string
   designator: string
   category: string
+  origin: Origin
   /** Periodo, altitudes y tipo de órbita, de los elementos orbitales. */
   shape: OrbitDescription
   /** Época de los elementos orbitales. */
@@ -144,11 +154,16 @@ export function createSatellites(
 
   const info = (current: Tracked): SelectedInfo => {
     const entry = catalog.find((e) => e.id === selectedId)
+    const row = rowOf.get(current.record.NORAD_CAT_ID)
     return {
       id: current.record.NORAD_CAT_ID,
       name: entry?.name ?? current.record.OBJECT_NAME,
       designator: current.record.OBJECT_ID,
       category: entry?.category ?? '',
+      origin:
+        columns && row !== undefined
+          ? { owner: columns.owner[row]!, type: columns.type[row]!, status: columns.status[row]!, launch: columns.launch[row]! }
+          : { owner: '', type: 'UNK', status: '', launch: '' },
       shape: describeOrbit(current.record),
       epoch: epochDate(current.record),
       downloadedAt,

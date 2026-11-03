@@ -1,10 +1,11 @@
 import { useId } from 'react'
 import type { Clock } from '../app/clock'
 import { getCategory } from '../satellites/categories'
+import { describeOwner, describeStatus, describeType } from '../satellites/origin'
 import type { SelectedInfo } from '../satellites/createSatellites'
 import { orbitProgress } from '../satellites/propagation/orbit'
 import type { Store } from '../shared/store'
-import { NBSP, describeRegime, describeSunlight, formatDecimal, formatInteger, formatLatitude, formatLongitude, formatSpan } from './format'
+import { NBSP, describeRegime, describeSunlight, formatDecimal, formatInteger, formatLatitude, formatLongitude, formatLaunch, formatSpan } from './format'
 import { useClockTime, useNow, useStore } from './hooks'
 import { CloseIcon } from './icons'
 import { describeReliability } from './reliability'
@@ -39,6 +40,9 @@ export function SelectedCard({ selected, clock, onClose, onCenter }: Props) {
   const reliability = describeReliability({ epoch: info.epoch, downloadedAt: info.downloadedAt, simTime, now })
   const progress = orbit ? orbitProgress(orbit, simTime) : null
   const period = formatSpan(shape.periodMinutes * 60_000)
+  const { origin } = info
+  const launch = formatLaunch(origin.launch, now)
+  const status = describeStatus(origin.status)
 
   return (
     <aside className="card" aria-labelledby={headingId}>
@@ -107,6 +111,28 @@ export function SelectedCard({ selected, clock, onClose, onCenter }: Props) {
             <dt>Inclinación</dt>
             <dd className="num">{formatDecimal(shape.inclinationDeg, 1)}°</dd>
           </div>
+        </dl>
+      </section>
+
+      <section className="card-section" aria-label="Origen">
+        <h3>Origen</h3>
+        <dl className="origin">
+          <dt>Propietario</dt>
+          <dd>{describeOwner(origin.owner)}</dd>
+          <dt>Tipo</dt>
+          <dd>{describeType(origin.type)}</dd>
+          {launch && (
+            <>
+              <dt>Lanzamiento</dt>
+              <dd className="num">{launch}</dd>
+            </>
+          )}
+          {status && (
+            <>
+              <dt>Estado</dt>
+              <dd>{status}</dd>
+            </>
+          )}
         </dl>
       </section>
 

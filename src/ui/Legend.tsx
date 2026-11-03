@@ -9,10 +9,13 @@ import { VirtualList } from './VirtualList'
 
 
 /** Leyenda del globo: qué son los puntos, cuántos hay de cada tipo, y un interruptor para mostrarlos u ocultarlos. */
-export function Legend({ engine }: { engine: Engine }) {
+export function Legend({ engine, owner }: { engine: Engine; owner: string }) {
   const data = useStore(engine.data)
   const selectedId = useStore(engine.selection)
-  const groups = useMemo(() => (data.kind === 'ready' ? groupByCategory(data.catalog) : []), [data])
+  const groups = useMemo(() => {
+    if (data.kind !== 'ready') return []
+    return groupByCategory(owner ? data.catalog.filter((e) => e.owner === owner) : data.catalog)
+  }, [data, owner])
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(CATEGORIES.filter((c) => c.hiddenByDefault).map((c) => c.id)))
   const [openId, setOpenId] = useState<string | null>(null)
 
