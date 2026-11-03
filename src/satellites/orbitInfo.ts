@@ -1,7 +1,7 @@
 import type { OmmRecord } from './data/omm'
 
 const MU_KM3_S2 = 398_600.4418 // parámetro gravitatorio de la Tierra
-const EARTH_EQUATORIAL_KM = 6378.137
+export const EARTH_EQUATORIAL_KM = 6378.137 // las altitudes de los elementos orbitales se cuentan desde el ecuador
 const GEOSYNCHRONOUS_MINUTES = 1436.07 // un día sidéreo
 const GEOSYNCHRONOUS_TOLERANCE = 0.02
 const ELLIPTICAL_ECCENTRICITY = 0.25

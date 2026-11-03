@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CelestrakError, fetchGroups, groupUrl } from '../../src/satellites/data/fetchGroups'
+import { CelestrakError } from '../../src/satellites/data/celestrak'
+import { fetchGroups, groupUrl } from '../../src/satellites/data/fetchGroups'
 import { stationsRaw } from '../helpers/fixtures'
 
 const UA = 'orbitwatch-test/0'

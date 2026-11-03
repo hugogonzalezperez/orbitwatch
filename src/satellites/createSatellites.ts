@@ -3,7 +3,7 @@ import { pickNearest } from '../scene/picking'
 import { createStore, type Store } from '../shared/store'
 import { EARTH_RADIUS_KM } from '../shared/units'
 import { buildCatalog, type CatalogEntry } from './catalog'
-import { describeOrbit, type OrbitDescription } from './orbitInfo'
+import { describeOrbit, EARTH_EQUATORIAL_KM, type OrbitDescription } from './orbitInfo'
 import { getCategory } from './categories'
 import { ORBIT_POINTS, SATELLITE_COLOR, SATELLITE_SIZE_PX, SELECTION_COLOR, SWARM_HIT_RADIUS_PX, SWARM_SIZE_PX } from './config'
 import { sha256Hex } from '../shared/hash'
@@ -96,7 +96,6 @@ interface Satellites {
   dispose(): void
 }
 
-const EARTH_EQUATORIAL_KM = 6378.137 // las altitudes de los elementos orbitales se cuentan desde el ecuador
 const PUBLISH_INTERVAL_MS = 250 // React no necesita más de 4 actualizaciones por segundo
 
 const fetchText = async (path: string, init?: RequestInit): Promise<string> => {
@@ -144,7 +143,6 @@ export function createSatellites(
   const names = new Map<SatelliteId, string>()
   let downloadedAt = new Date(0)
 
-  let selectedId: SatelliteId | null = null
   let tracked: Tracked | undefined
   let state: SatelliteState | null = null
   let orbit: Revolution | undefined
@@ -153,13 +151,13 @@ export function createSatellites(
   let disposed = false
 
   const info = (current: Tracked): SelectedInfo => {
-    const entry = catalog.find((e) => e.id === selectedId)
-    const row = rowOf.get(current.record.NORAD_CAT_ID)
+    const id = current.record.NORAD_CAT_ID
+    const row = rowOf.get(id)
     return {
-      id: current.record.NORAD_CAT_ID,
-      name: entry?.name ?? current.record.OBJECT_NAME,
+      id,
+      name: names.get(id) ?? current.record.OBJECT_NAME,
       designator: current.record.OBJECT_ID,
-      category: entry?.category ?? '',
+      category: columns && row !== undefined ? columns.categories[columns.category[row]!]! : '',
       origin:
         columns && row !== undefined
           ? { owner: columns.owner[row]!, type: columns.type[row]!, status: columns.status[row]!, launch: columns.launch[row]! }
@@ -226,7 +224,6 @@ export function createSatellites(
     select(id) {
       const row = id === null ? undefined : rowOf.get(id)
       const record = row === undefined || !columns ? undefined : recordAt(columns, row)
-      selectedId = record ? id : null
       tracked = record && createTracked(record)
       state = null
       orbit = undefined

@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { Engine } from '../app/engine'
-import { rankResults, searchEntries } from '../satellites/catalog'
+import { filterByOwner, rankResults, searchEntries } from '../satellites/catalog'
 import { getCategory } from '../satellites/categories'
 import { cssColor } from './format'
 import { useStore } from './hooks'
@@ -12,7 +12,7 @@ const MAX_RESULTS = 8
 export function Search({ engine, owner }: { engine: Engine; owner: string }) {
   const data = useStore(engine.data)
   const all = data.kind === 'ready' ? data.catalog : null
-  const catalog = useMemo(() => (all && owner ? all.filter((e) => e.owner === owner) : all), [all, owner])
+  const catalog = useMemo(() => (all ? filterByOwner(all, owner) : null), [all, owner])
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)

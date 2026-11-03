@@ -43,9 +43,9 @@ export interface CatalogColumns {
   nddot: number[]
 }
 
-const NUMBER_COLUMNS = ['category', 'id', 'meanMotion', 'eccentricity', 'inclination', 'raan', 'argPerigee', 'meanAnomaly', 'bstar', 'ndot', 'nddot'] as const
+const ELEMENT_COLUMNS = ['meanMotion', 'eccentricity', 'inclination', 'raan', 'argPerigee', 'meanAnomaly', 'bstar', 'ndot', 'nddot'] as const // en el orden de ELEMENT_FIELDS
+const NUMBER_COLUMNS = ['category', 'id', ...ELEMENT_COLUMNS] as const
 const STRING_COLUMNS = ['name', 'designator', 'epoch', 'owner', 'type', 'status', 'launch'] as const
-const ELEMENT_COLUMNS = ['meanMotion', 'eccentricity', 'inclination', 'raan', 'argPerigee', 'meanAnomaly', 'bstar', 'ndot', 'nddot'] as const
 
 export function encodeColumns(entries: ClassifiedRecord[]): CatalogColumns {
   const categories: string[] = CATEGORIES.map((c) => c.id)

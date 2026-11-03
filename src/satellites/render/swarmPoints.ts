@@ -18,7 +18,7 @@ const VERTEX = /* glsl */ `
     float inShadow = step(along, 0.0) * (1.0 - smoothstep(0.97, 1.0, length(p - uSun * along)));
     vLit = mix(1.0, 0.45, inShadow);
     // Opacidad mayor que 1: punto enfatizado (coincide con la búsqueda), más grande. Opacidad 0 o inválido: no se dibuja.
-    vColor = vec4(color.rgb, color.a);
+    vColor = color;
     gl_PointSize = uSize * (1.0 + step(1.5, color.a) * 1.5);
     gl_Position = valid > 0.5 && color.a > 0.0
       ? projectionMatrix * modelViewMatrix * vec4(p, 1.0)

@@ -12,9 +12,8 @@ interface Options {
 }
 
 /**
- * Un `fetch` que no repite una descarga reciente: CelesTrak pide una sola descarga por actualización y así ejecutar el
- * script varias veces seguidas no la incumple. Solo guarda los 200; lo demás se devuelve tal cual. La edad sale de una marca
- * de tiempo propia y no de la fecha del fichero, que una caché restaurada en integración continua puede haber reiniciado.
+ * Un `fetch` que no repite una descarga reciente (CelesTrak pide una por actualización) y solo guarda los 200. La edad sale
+ * de una marca propia, no de la fecha del fichero, que una caché restaurada en integración continua reinicia.
  */
 export function createCachedFetch({ dir, maxAgeMs, fetchImpl = fetch, now = Date.now }: Options): typeof fetch {
   return async (input, init) => {

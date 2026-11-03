@@ -47,6 +47,9 @@ export function buildCatalog(columns: CatalogColumns): CatalogEntry[] {
   return entries.sort((a, b) => categoryRank(a.category) - categoryRank(b.category) || NAME_ORDER.compare(a.name, b.name))
 }
 
+/** Los de un propietario; con `owner` vacío, todos. */
+export const filterByOwner = (entries: CatalogEntry[], owner: string): CatalogEntry[] => (owner ? entries.filter((e) => e.owner === owner) : entries)
+
 /** Cuántos objetos tiene cada propietario, de más a menos; a igual número, por nombre. */
 export function countByOwner(entries: CatalogEntry[]): Array<{ owner: string; name: string; count: number }> {
   const counts = new Map<string, number>()

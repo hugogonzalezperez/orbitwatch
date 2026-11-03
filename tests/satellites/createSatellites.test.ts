@@ -17,7 +17,6 @@ const FILES: Record<string, string> = {
     schemaVersion: 4,
     generatedAt: '2026-11-02T00:00:00Z',
     catalog: { file: catalogFile, count: 20, sha256 },
-    groups: [{ group: 'stations', count: 10 }, { group: 'weather', count: 10 }],
   }),
   [catalogFile]: catalogText,
 }

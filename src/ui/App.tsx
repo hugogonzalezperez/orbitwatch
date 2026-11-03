@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Engine } from '../app/engine'
-import { dataFreshness } from '../satellites/data/manifest'
+import { dataFreshness } from '../satellites/data/freshness'
 import { ClockPanel } from './ClockPanel'
 import { formatInteger, formatSpan } from './format'
 import { GlobeCanvas } from './GlobeCanvas'

@@ -55,10 +55,8 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 
 /**
- * Cuánto tiempo se puede reutilizar lo ya descargado de cada dirección. Los elementos de `active` (todos los satélites en
- * activo) cambian cada 2 h; la pertenencia a un grupo y el SATCAT, que CelesTrak actualiza una o dos veces al día, mucho
- * menos. Así una ejecución cada 2 h pide una sola dirección, y las demás (y el SATCAT) solo una vez al día. Los 100 minutos
- * hacen que una ejecución cada 2 h siempre vuelva a descargar `active`.
+ * Cuánto se reutiliza lo descargado: `active` cambia cada 2 h (100 min, para que una ejecución cada 2 h lo baje siempre);
+ * la pertenencia a los grupos y el SATCAT, una o dos veces al día (22 h).
  */
 export function cacheMaxAgeMs(url: string): number {
   return url.includes('GROUP=active&') ? 100 * MINUTE : 22 * HOUR

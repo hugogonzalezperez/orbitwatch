@@ -26,11 +26,7 @@ export function classify({ groups, name, type }: { groups: readonly string[]; na
   return NAME_RULES.find((rule) => rule.pattern.test(name))?.category ?? 'other'
 }
 
-/**
- * Une los grupos descargados en un solo catálogo: un registro por número de catálogo (el de época más reciente si varios
- * grupos lo traen), con su categoría y lo que dice el SATCAT, ordenado por número para que los mismos datos den siempre el
- * mismo fichero.
- */
+/** Un registro por número de catálogo (el de época más reciente), con su categoría y el SATCAT, ordenado por número: los mismos datos dan el mismo fichero. */
 export function assembleCatalog(data: GroupData[], satcat: ReadonlyMap<number, SatcatRow>): ClassifiedRecord[] {
   const byId = new Map<number, { record: OmmRecord; groups: string[] }>()
   for (const { name, records } of data) {

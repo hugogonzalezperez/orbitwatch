@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react'
 import type { Engine } from '../app/engine'
-import { groupByCategory, type CatalogEntry } from '../satellites/catalog'
+import { filterByOwner, groupByCategory, type CatalogEntry } from '../satellites/catalog'
 import { CATEGORIES, type Category } from '../satellites/categories'
 import { cssColor, formatInteger } from './format'
 import { useStore } from './hooks'
@@ -12,10 +12,7 @@ import { VirtualList } from './VirtualList'
 export function Legend({ engine, owner }: { engine: Engine; owner: string }) {
   const data = useStore(engine.data)
   const selectedId = useStore(engine.selection)
-  const groups = useMemo(() => {
-    if (data.kind !== 'ready') return []
-    return groupByCategory(owner ? data.catalog.filter((e) => e.owner === owner) : data.catalog)
-  }, [data, owner])
+  const groups = useMemo(() => (data.kind === 'ready' ? groupByCategory(filterByOwner(data.catalog, owner)) : []), [data, owner])
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(CATEGORIES.filter((c) => c.hiddenByDefault).map((c) => c.id)))
   const [openId, setOpenId] = useState<string | null>(null)
 

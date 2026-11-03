@@ -73,12 +73,11 @@ Un array por campo, y la fila `i` de todos ellos es el satélite `i`: `id`, `nam
 {
   "schemaVersion": 4,
   "generatedAt": "2026-11-03T00:26:00.000Z",
-  "catalog": { "file": "catalog.a6c379ad.json", "count": 19612, "sha256": "a6c379ad…" },
-  "groups": [{ "group": "stations", "count": 20 }, …]
+  "catalog": { "file": "catalog.a6c379ad.json", "count": 19612, "sha256": "a6c379ad…" }
 }
 ```
 
-`generatedAt` es cuándo se descargaron los datos, y no es lo mismo que la época de cada objeto. `groups` recoge lo que trajo cada grupo antes de unirlos.
+`generatedAt` es cuándo se descargaron los datos, y no es lo mismo que la época de cada objeto.
 
 ## Frescura y fiabilidad
 

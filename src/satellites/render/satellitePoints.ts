@@ -40,7 +40,7 @@ interface SatellitePoints {
   setPositions(positions: ArrayLike<number>, count: number): void
 }
 
-/** Una sola llamada de dibujo para todos los puntos; hoy solo la ISS, pero el diseño es el de miles. */
+/** Los puntos del satélite seleccionado, en una sola llamada de dibujo. */
 export function createSatellitePoints(
   renderer: WebGLRenderer,
   capacity: number,

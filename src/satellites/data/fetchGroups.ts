@@ -1,3 +1,4 @@
+import { CelestrakError, requestCelestrak } from './celestrak'
 import { assertHealthy, parseOmmList, type OmmRecord } from './omm'
 
 export interface GroupSpec {
@@ -10,18 +11,6 @@ export interface GroupData {
   name: string
   records: OmmRecord[]
   rejected: number
-}
-
-export class CelestrakError extends Error {
-  constructor(
-    message: string,
-    readonly group: string,
-    /** Código HTTP, si llegó a haber respuesta. */
-    readonly status?: number,
-  ) {
-    super(message)
-    this.name = 'CelestrakError'
-  }
 }
 
 export const groupUrl = (group: string): string => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${encodeURIComponent(group)}&FORMAT=json`
@@ -42,15 +31,7 @@ export async function fetchGroups(
   const result: GroupData[] = []
   for (const { name, minObjects } of groups) {
     if (result.length > 0 && delayMs > 0) await sleep(delayMs) // cortesía con CelesTrak: no se piden seguidos
-    let response: Response
-    try {
-      response = await fetchImpl(groupUrl(name), { headers: { 'User-Agent': userAgent }, redirect: 'error' })
-    } catch (error) {
-      throw new CelestrakError(`No se pudo contactar con CelesTrak para ${name}: ${(error as Error).message}`, name)
-    }
-    if (response.status !== 200) {
-      throw new CelestrakError(`CelesTrak respondió HTTP ${response.status} para ${name}; no se reintenta`, name, response.status)
-    }
+    const response = await requestCelestrak(fetchImpl, groupUrl(name), userAgent, name)
     let json: unknown
     try {
       json = await response.json()

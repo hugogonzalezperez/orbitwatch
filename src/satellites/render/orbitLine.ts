@@ -40,8 +40,8 @@ export function createOrbitLine(color: number): OrbitLine {
       // Distancia acumulada a lo largo de la línea: es lo que LineDashedMaterial usa para repartir los guiones.
       let length = 0
       for (let i = 1; i < ORBIT_POINTS; i++) {
-        const [dx, dy, dz] = [0, 1, 2].map((axis) => points[i * 3 + axis]! - points[(i - 1) * 3 + axis]!)
-        length += Math.hypot(dx!, dy!, dz!)
+        const j = i * 3
+        length += Math.hypot(points[j]! - points[j - 3]!, points[j + 1]! - points[j - 2]!, points[j + 2]! - points[j - 1]!)
         distances.array[i] = length
       }
       distances.needsUpdate = true

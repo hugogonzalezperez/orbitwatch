@@ -3,10 +3,7 @@ import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { MAX_ANISOTROPY } from './config'
 
 export interface TextureSource {
-  /**
-   * Carga una textura KTX2 de `public/textures/earth`, la entrega a `apply` y pide dibujar. Nunca rechaza: si falla
-   * (o el globo ya se liberó) lo registra y no llama a `apply`.
-   */
+  /** Carga una textura KTX2, la entrega a `apply` y pide dibujar. Nunca rechaza: si falla, lo registra y no llama a `apply`. */
   load(file: string, apply: (texture: Texture) => void): Promise<void>
   dispose(): void
 }

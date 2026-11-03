@@ -1,5 +1,4 @@
-import { ageBand, epochDistanceDays, type AgeBand } from '../satellites/data/freshness'
-import { dataFreshness } from '../satellites/data/manifest'
+import { ageBand, dataFreshness, epochDistanceDays, type AgeBand } from '../satellites/data/freshness'
 import { formatSpan } from './format'
 
 export interface Reliability {

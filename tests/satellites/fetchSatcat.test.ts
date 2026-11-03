@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CelestrakError } from '../../src/satellites/data/fetchGroups'
+import { CelestrakError } from '../../src/satellites/data/celestrak'
 import { fetchSatcat } from '../../src/satellites/data/fetchSatcat'
 import { SATCAT_URL } from '../../src/satellites/data/satcat'
 
