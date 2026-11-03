@@ -132,13 +132,13 @@ El color por categoría responde «qué es»; el color por tipo de órbita (baja
 Por debajo de 48 rem el buscador queda arriba con un botón que despliega los filtros y las categorías, y la ficha pasa a ser una hoja sobre el reloj (que se reorganiza en tres filas). Al elegir un satélite los filtros se pliegan. Comprobado en 390 × 844 sin desbordamiento horizontal.
 
 ### Política de contenido en el build
-GitHub Pages no permite cabeceras, así que el build lleva una etiqueta `Content-Security-Policy` (solo recursos del propio sitio, `wasm-unsafe-eval` para SGP4 y las texturas, `form-action 'none'`, `object-src 'none'`). Solo en el build: el servidor de desarrollo inyecta scripts. Comprobado en el navegador sin violaciones.
+GitHub Pages no permite cabeceras, así que el build lleva una etiqueta `Content-Security-Policy`: solo recursos del propio sitio, `form-action 'none'`, `object-src 'none'`, `base-uri 'self'`. Solo en el build: el servidor de desarrollo inyecta scripts. **Concesión:** `script-src` lleva `'unsafe-eval'` y `'wasm-unsafe-eval'`. El transcodificador de texturas Basis (compilado con Emscripten/embind) crea funciones con `new Function` dentro de su worker; sin `unsafe-eval` no decodifica y la Tierra se queda como una esfera azul. La primera versión de la política lo olvidó y se publicó así: las comprobaciones miraban la consola de la página, pero los errores de un worker no llegan a ella. Ahora la prueba de humo lee también el registro del navegador. Como la web no tiene entradas que lleguen al DOM como HTML ni scripts de terceros, la concesión tiene poco riesgo práctico; la política sigue bloqueando cargas de otros orígenes.
 
 ### El paquete de JavaScript no se parte
 932 kB sin comprimir y 265 kB comprimido, más 20 kB del Worker y el transcodificador de texturas aparte. Partirlo en trozos (three, React, satellite.js) no reduciría lo que se descarga la primera vez, y los nombres de los ficheros llevan hash: el redespliegue cada 2 h solo cambia los datos, así que la caché del navegador ya reutiliza el JavaScript. Se deja como está; el aviso de tamaño de Vite es informativo.
 
 ### Pruebas de humo y accesibilidad automáticas
-`npm run e2e` (Playwright con el Chrome del sistema y renderizado por software, contra el build) comprueba lo esencial: carga, 13 categorías, ficha de la ISS, búsqueda, enlace con estado, filtro por país, salto de hora y acercamientos, y pasa axe (WCAG 2.0/2.1 A y AA) sobre dos estados. La política de contenido bloquea el `new Function` con el que Playwright evalúa en la página; esos errores son de la herramienta y se filtran (la app no los produce). Axe corre con la política desactivada porque se inyecta como script.
+`npm run e2e` (Playwright con el Chrome del sistema y renderizado por software, contra el build) comprueba lo esencial: carga, 13 categorías, ficha de la ISS, búsqueda, enlace con estado, filtro por país, salto de hora y acercamientos, y pasa axe (WCAG 2.0/2.1 A y AA) sobre dos estados. La primera prueba falla ante cualquier error de la consola, de la página o de un worker. Axe corre con la política desactivada porque se inyecta como script.
 
 ## Alojamiento y dominio
 

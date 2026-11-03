@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config'
 // GitHub Pages no deja poner cabeceras: la política de contenido va en una etiqueta, solo en el build (el servidor de desarrollo inyecta scripts).
 const CONTENT_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval'", // SGP4 y el transcodificador de texturas son WebAssembly
+  "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'", // WebAssembly de SGP4 y de las texturas; el transcodificador Basis (embind) crea funciones con `new Function`, y sin esto no decodifica la Tierra
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "worker-src 'self' blob:",

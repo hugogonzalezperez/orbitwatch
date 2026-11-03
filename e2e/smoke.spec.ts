@@ -1,20 +1,21 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
-// La política de contenido de la página bloquea `new Function`, que Playwright usa para evaluar en ella: esos errores son de la
-// herramienta, no de la app (sin evaluar nada la consola queda limpia), y se descartan.
-const FROM_TOOL = 'Evaluating a string as JavaScript'
-
-test('carga el catálogo, muestra las categorías y la ficha de la ISS, sin errores en consola', async ({ page }) => {
+test('carga el catálogo, muestra las categorías y la ficha de la ISS, sin errores en consola ni en los workers', async ({ page }) => {
   const problems: string[] = []
-  page.on('console', (message) => message.type() === 'error' && !message.text().includes(FROM_TOOL) && problems.push(message.text()))
-  page.on('pageerror', (error) => !error.message.includes(FROM_TOOL) && problems.push(error.message))
+  page.on('console', (message) => message.type() === 'error' && problems.push(message.text()))
+  page.on('pageerror', (error) => problems.push(error.message))
+  // Los errores de los workers (el que decodifica las texturas) no llegan a `console`: se leen del registro del navegador.
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Log.enable')
+  cdp.on('Log.entryAdded', ({ entry }) => entry.level === 'error' && problems.push(entry.text))
   await page.goto('/')
 
   await expect(page.locator('.brand-line')).toContainText('objetos', { timeout: 30_000 })
   await expect(page.locator('.legend-toggle')).toHaveCount(13)
   await expect(page.locator('.card-name')).toHaveText('ISS (ZARYA)') // la primera vista es la ISS
   await expect(page.locator('.origin')).toContainText('Estación Espacial Internacional')
+  await page.waitForTimeout(8000) // las texturas se descargan y decodifican después del catálogo
   expect(problems).toEqual([])
 })
 
