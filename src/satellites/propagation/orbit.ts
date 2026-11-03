@@ -1,5 +1,6 @@
 import { propagate } from 'satellite.js'
 import { epochDate } from '../data/omm'
+import { describeOrbit } from '../orbitInfo'
 import { sceneAt, type Tracked } from './position'
 
 export interface Revolution {
@@ -30,7 +31,7 @@ function refineCrossing(tracked: Tracked, before: number, after: number): number
 
 /** Vuelta de un periodo contada desde la época: para las órbitas sin cruce ecuatorial que buscar (casi ecuatoriales) o más largas que el rastreo. */
 function periodRevolution({ record }: Tracked, date: Date): Revolution {
-  const periodMs = Math.round((1440 / Number(record.MEAN_MOTION)) * 60_000) // en milisegundos enteros, para que los límites de cada vuelta sean fechas exactas
+  const periodMs = Math.round(describeOrbit(record).periodMinutes * 60_000) // en milisegundos enteros, para que los límites de cada vuelta sean fechas exactas
   const epochMs = epochDate(record).getTime()
   const start = epochMs + Math.floor((date.getTime() - epochMs) / periodMs) * periodMs
   return { start: new Date(start), end: new Date(start + periodMs) }

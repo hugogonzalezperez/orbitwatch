@@ -2,12 +2,12 @@ import { gstime } from 'satellite.js'
 import { Group, type WebGLRenderer } from 'three'
 import { createAtmosphere } from './atmosphere'
 import { createClouds } from './clouds'
-import { CLOUDS_ENABLED } from './config'
 import { createEarth } from './earth'
 import { createGraticule } from './graticule'
 import { createLighting } from './lighting'
 import { createSunDisc } from './sunDisc'
 import { createTextureSource } from './textureSource'
+import { sunDirectionScene } from '../shared/sun'
 
 interface Globe {
   object: Group
@@ -21,7 +21,7 @@ interface Globe {
 export function createGlobe(renderer: WebGLRenderer, invalidate: () => void): Globe {
   const textures = createTextureSource(renderer, invalidate)
   const earth = new Group().add(createEarth(textures), createGraticule())
-  if (CLOUDS_ENABLED) earth.add(createClouds(textures))
+  earth.add(createClouds(textures))
   const lighting = createLighting()
   const atmosphere = createAtmosphere()
   const sunDisc = createSunDisc()
@@ -30,9 +30,10 @@ export function createGlobe(renderer: WebGLRenderer, invalidate: () => void): Gl
     object,
     update(date) {
       earth.rotation.y = gstime(date) // +Y lleva +X hacia −Z: el este
-      lighting.update(date)
-      atmosphere.update(date)
-      sunDisc.update(date)
+      const sun = sunDirectionScene(date) // una vez por actualización, para los tres
+      lighting.update(sun)
+      atmosphere.update(sun)
+      sunDisc.update(sun)
     },
     dispose: textures.dispose,
   }

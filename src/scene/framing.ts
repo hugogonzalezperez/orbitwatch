@@ -1,4 +1,4 @@
-import { Vector3 } from 'three'
+import { MathUtils, Vector3 } from 'three'
 import { INITIAL_DISTANCE, MAX_DISTANCE, MIN_DISTANCE } from './config'
 
 /** Hasta qué fracción del semicampo de visión puede alejarse del eje el punto más extremo de la órbita: deja un margen al borde. */
@@ -19,7 +19,7 @@ interface Framing {
  * perspectiva, y los laterales, dentro de `FRAMING_MARGIN`). Conserva la distancia actual si es menor que la habitual.
  */
 export function framingDistance({ orbitRadius, tiltRad, fovDeg, aspect, currentDistance }: Framing): number {
-  const halfVertical = (fovDeg / 2) * (Math.PI / 180)
+  const halfVertical = (fovDeg / 2) * MathUtils.DEG2RAD
   const halfHorizontal = Math.atan(Math.tan(halfVertical) * aspect)
   const nearPoint = orbitRadius * Math.cos(tiltRad) + (orbitRadius * Math.sin(tiltRad)) / Math.tan(halfVertical * FRAMING_MARGIN)
   const sides = orbitRadius / Math.tan(halfHorizontal * FRAMING_MARGIN)

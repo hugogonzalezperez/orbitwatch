@@ -1,4 +1,5 @@
 import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments, MathUtils } from 'three'
+import { temeToScene } from '../shared/frames'
 import { GRATICULE_RADIUS } from './config'
 
 const GRATICULE_STEP_DEG = 15
@@ -7,7 +8,7 @@ const GRATICULE_SEGMENTS = 96
 const point = (latDeg: number, lonDeg: number, radius: number): [number, number, number] => {
   const lat = latDeg * MathUtils.DEG2RAD
   const lon = lonDeg * MathUtils.DEG2RAD
-  return [radius * Math.cos(lat) * Math.cos(lon), radius * Math.sin(lat), -radius * Math.cos(lat) * Math.sin(lon)]
+  return temeToScene(radius * Math.cos(lat) * Math.cos(lon), radius * Math.cos(lat) * Math.sin(lon), radius * Math.sin(lat))
 }
 
 /** Pares de vértices (para LineSegments) de paralelos (sin polos) y meridianos de polo a polo. */

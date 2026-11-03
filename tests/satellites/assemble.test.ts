@@ -136,6 +136,12 @@ describe('categorías y grupos a descargar', () => {
   })
 })
 
+describe('DATA_GROUPS', () => {
+  it('todos los grupos tienen un mínimo de objetos propio: sin él, la comprobación de salud no valdría', () => {
+    expect(DATA_GROUPS.every((g) => g.minObjects > 1)).toBe(true)
+  })
+})
+
 describe('cacheMaxAgeMs', () => {
   it('los elementos de `active` se vuelven a pedir en cada ejecución de 2 h; el resto y el SATCAT, una vez al día', () => {
     const MIN = 60_000

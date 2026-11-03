@@ -1,6 +1,5 @@
 import { json2satrec, propagate, type SatRec } from 'satellite.js'
-import { temeToScene } from '../../shared/frames'
-import { EARTH_RADIUS_KM, kmToUnits } from '../../shared/units'
+import { kmToUnits } from '../../shared/units'
 import { ELEMENT_FIELDS, type OrbitInput } from '../data/columns'
 import type { OmmRecord } from '../data/omm'
 
@@ -44,13 +43,17 @@ export function propagateBatch({ satrecs }: Batch, epochMs: number, out: Sample)
   out.epochMs = epochMs
   for (let i = 0; i < satrecs.length; i++) {
     const result = propagate(satrecs[i]!, date)
-    const position = result ? temeToScene(result.position.x, result.position.y, result.position.z) : null
-    const velocity = result ? temeToScene(result.velocity.x, result.velocity.y, result.velocity.z) : null
-    const ok = position !== null && velocity !== null && position.every(Number.isFinite) && velocity.every(Number.isFinite)
+    const p = result?.position
+    const v = result?.velocity
+    // TEME a escena: (x, y, z) pasa a (x, z, -y); se escribe directo, sin tuplas intermedias (son miles por muestra).
+    const ok = p !== undefined && v !== undefined && [p.x, p.y, p.z, v.x, v.y, v.z].every(Number.isFinite)
     out.valid[i] = ok ? 1 : 0
-    for (let k = 0; k < 3; k++) {
-      out.positions[i * 3 + k] = ok ? kmToUnits(position[k]!) : 0
-      out.velocities[i * 3 + k] = ok ? velocity[k]! / EARTH_RADIUS_KM : 0
-    }
+    const j = i * 3
+    out.positions[j] = ok ? kmToUnits(p.x) : 0
+    out.positions[j + 1] = ok ? kmToUnits(p.z) : 0
+    out.positions[j + 2] = ok ? kmToUnits(-p.y) : 0
+    out.velocities[j] = ok ? kmToUnits(v.x) : 0
+    out.velocities[j + 1] = ok ? kmToUnits(v.z) : 0
+    out.velocities[j + 2] = ok ? kmToUnits(-v.y) : 0
   }
 }

@@ -1,5 +1,4 @@
 import { AdditiveBlending, MathUtils, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three'
-import { sunDirectionScene } from '../shared/sun'
 
 const SUN_ANGULAR_RADIUS = 0.2665 * MathUtils.DEG2RAD // el Sol mide 0,53° de diámetro visto desde la Tierra
 const GLOW_FACTOR = 9 // el resplandor se extiende nueve veces el radio del disco
@@ -33,7 +32,8 @@ const FRAGMENT = /* glsl */ `
 
 interface SunDisc {
   object: Mesh
-  update(date: Date): void
+  /** Dirección unitaria hacia el Sol en la escena. */
+  update(sun: readonly [number, number, number]): void
 }
 
 /** El Sol: un disco del tamaño angular real, en la dirección real y a distancia infinita. */
@@ -52,5 +52,5 @@ export function createSunDisc(): SunDisc {
   const object = new Mesh(new PlaneGeometry(half * 2, half * 2), material)
   object.frustumCulled = false
   object.renderOrder = -1 // después de las estrellas
-  return { object, update: (date) => void direction.set(...sunDirectionScene(date)) }
+  return { object, update: (sun) => void direction.set(...sun) }
 }

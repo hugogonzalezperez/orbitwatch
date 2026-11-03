@@ -1,6 +1,6 @@
 // Descarga los grupos de CelesTrak y el SATCAT, los une en un catálogo por columnas y lo escribe en public/data/ con su
 // manifiesto. Una descarga por actualización: caché local (ver `cacheMaxAgeMs`) y un segundo de pausa entre peticiones.
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { sha256Hex } from '../src/shared/hash'
 import { assembleCatalog } from '../src/satellites/data/assemble'
@@ -8,7 +8,7 @@ import { encodeColumns } from '../src/satellites/data/columns'
 import { fetchGroups } from '../src/satellites/data/fetchGroups'
 import { fetchSatcat } from '../src/satellites/data/fetchSatcat'
 import { cacheMaxAgeMs, DATA_GROUPS } from '../src/satellites/data/groups'
-import { catalogFileName, serializeManifest } from '../src/satellites/data/manifest'
+import { catalogFileName, FILE_PATTERN, serializeManifest } from '../src/satellites/data/manifest'
 import { createCachedFetch } from './cachedFetch'
 import { writeAtomic } from './writeAtomic'
 
@@ -27,8 +27,8 @@ const sha256 = await sha256Hex(text)
 const file = catalogFileName(sha256)
 await mkdir(out, { recursive: true })
 await writeAtomic(out, file, text)
-for (const name of await readdir(out)) if (/^catalog\.[0-9a-f]{8}\.json$/.test(name) && name !== file) await rm(join(out, name)) // los de datos anteriores
-await writeFile(join(out, 'manifest.json'), serializeManifest(new Date(), { file, count: entries.length, sha256 }))
+for (const name of await readdir(out)) if (FILE_PATTERN.test(name) && name !== file) await rm(join(out, name)) // los de datos anteriores
+await writeAtomic(out, 'manifest.json', serializeManifest(new Date(), { file, count: entries.length, sha256 }))
 
 const countBy = (key: 'category' | 'type') => {
   const counts = new Map<string, number>()

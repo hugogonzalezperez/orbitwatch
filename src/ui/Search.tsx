@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { Engine } from '../app/engine'
-import { filterByOwner, rankResults, searchEntries } from '../satellites/catalog'
+import { filterByOwner, rankMatches, searchEntries } from '../satellites/catalog'
 import { getCategory } from '../satellites/categories'
 import { cssColor } from './format'
 import { useStore } from './hooks'
@@ -22,8 +22,8 @@ export function Search({ engine, owner }: { engine: Engine; owner: string }) {
   const searching = deferred.trim() !== ''
   const narrowing = searching || owner !== '' // con un país elegido, el globo atenúa lo que no es suyo aunque no se escriba nada
 
-  const results = useMemo(() => (catalog ? rankResults(catalog, deferred, MAX_RESULTS) : []), [catalog, deferred])
   const matches = useMemo(() => (catalog && narrowing ? searchEntries(catalog, deferred) : []), [catalog, deferred, narrowing])
+  const results = useMemo(() => rankMatches(matches, deferred, MAX_RESULTS), [matches, deferred])
 
   // El globo atenúa lo que no coincide con lo escrito ni con el país. (`matches` está vacío si no hay nada que filtrar.)
   useEffect(() => engine.setHighlight(matches.length > 0 ? new Set(matches.map((e) => e.id)) : null), [engine, matches]) // sin coincidencias no se atenúa nada: parecería que el globo se vacía

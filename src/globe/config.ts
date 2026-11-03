@@ -7,7 +7,6 @@ export const ATMOSPHERE_RADIUS = 1.045
 export const EARTH_SEGMENTS = { width: 128, height: 64 }
 // Mismas caras que la Tierra: con menos, el centro de cada cara se hunde bajo la superficie (lo comprueba un test).
 export const CLOUD_SEGMENTS = { width: 128, height: 64 }
-export const CLOUDS_ENABLED = true
 
 export const EARTH_COLOR = 0x1d4e89 // azul liso hasta que llega la textura
 export const MAX_ANISOTROPY = 8

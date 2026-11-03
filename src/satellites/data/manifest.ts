@@ -13,7 +13,7 @@ interface Manifest {
 }
 
 export const SCHEMA_VERSION = 4 // 4: el catálogo trae propietario, tipo, estado y fecha de lanzamiento (SATCAT)
-const FILE_PATTERN = /^catalog\.[0-9a-f]{8}\.json$/ // solo un nombre dentro de data/, sin rutas ni URL
+export const FILE_PATTERN = /^catalog\.[0-9a-f]{8}\.json$/ // solo un nombre dentro de data/, sin rutas ni URL
 const SHA_PATTERN = /^[0-9a-f]{64}$/
 
 const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0

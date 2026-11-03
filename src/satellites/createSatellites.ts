@@ -1,7 +1,7 @@
 import { Color, Group, Vector3, type PerspectiveCamera, type WebGLRenderer } from 'three'
 import { pickNearest } from '../scene/picking'
 import { createStore, type Store } from '../shared/store'
-import { EARTH_RADIUS_KM } from '../shared/units'
+import { kmToUnits } from '../shared/units'
 import { buildCatalog, type CatalogEntry } from './catalog'
 import { describeOrbit, EARTH_EQUATORIAL_KM, type OrbitDescription } from './orbitInfo'
 import { getCategory } from './categories'
@@ -245,7 +245,7 @@ export function createSatellites(
     },
     nameOf: (id) => names.get(id) ?? null,
     setHiddenCategories: (ids) => swarm?.setHidden(ids),
-    selectedOrbitRadius: () => (tracked ? (describeOrbit(tracked.record).apogeeKm + EARTH_EQUATORIAL_KM) / EARTH_RADIUS_KM : null),
+    selectedOrbitRadius: () => (tracked ? kmToUnits(describeOrbit(tracked.record).apogeeKm + EARTH_EQUATORIAL_KM) : null),
     pick(camera, width, height, x, y) {
       if (!swarm) return null
       swarm.positionsAt(lastTime, pickPositions)

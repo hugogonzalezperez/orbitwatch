@@ -46,10 +46,11 @@ const MIN_OBJECTS: Record<string, number> = {
 }
 
 /** Grupos de CelesTrak que se descargan: los de todas las categorías, sin repetir. */
-export const DATA_GROUPS: GroupSpec[] = [...new Set(CATEGORIES.flatMap((c) => c.groups))].map((name) => ({
-  name,
-  minObjects: MIN_OBJECTS[name] ?? 1,
-}))
+export const DATA_GROUPS: GroupSpec[] = [...new Set(CATEGORIES.flatMap((c) => c.groups))].map((name) => {
+  const minObjects = MIN_OBJECTS[name]
+  if (minObjects === undefined) throw new Error(`Al grupo «${name}» le falta su mínimo de objetos en MIN_OBJECTS`) // sin mínimo no habría comprobación
+  return { name, minObjects }
+})
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE

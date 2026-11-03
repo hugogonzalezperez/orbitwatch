@@ -1,5 +1,4 @@
 import { AdditiveBlending, Mesh, ShaderMaterial, SphereGeometry, Vector3 } from 'three'
-import { sunDirectionScene } from '../shared/sun'
 import { ATMOSPHERE_RADIUS, EARTH_SEGMENTS } from './config'
 
 const VERTEX = /* glsl */ `
@@ -43,7 +42,8 @@ const FRAGMENT = /* glsl */ `
 
 export interface Atmosphere {
   object: Mesh
-  update(date: Date): void
+  /** Dirección unitaria hacia el Sol en la escena. */
+  update(direction: readonly [number, number, number]): void
 }
 
 export function createAtmosphere(): Atmosphere {
@@ -58,5 +58,5 @@ export function createAtmosphere(): Atmosphere {
   })
   const object = new Mesh(new SphereGeometry(ATMOSPHERE_RADIUS, EARTH_SEGMENTS.width, EARTH_SEGMENTS.height), material)
   object.renderOrder = 2 // después de las nubes y antes de los satélites
-  return { object, update: (date) => void sun.set(...sunDirectionScene(date)) }
+  return { object, update: (direction) => void sun.set(...direction) }
 }

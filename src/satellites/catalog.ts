@@ -81,16 +81,17 @@ export function groupByCategory(entries: CatalogEntry[]): CategoryGroup[] {
  * Hasta `limit` resultados para el desplegable: primero el número de catálogo exacto, luego los nombres que empiezan por la
  * consulta y luego los que la contienen. Sin consulta no propone nada.
  */
-export function rankResults(entries: CatalogEntry[], query: string, limit: number): CatalogEntry[] {
+export const rankResults = (entries: CatalogEntry[], query: string, limit: number): CatalogEntry[] => rankMatches(searchEntries(entries, query), query, limit)
+
+/** Lo mismo que `rankResults` sobre lo que ya coincide con `query` (`searchEntries`), para no filtrar dos veces. */
+export function rankMatches(matches: CatalogEntry[], query: string, limit: number): CatalogEntry[] {
   const text = normalize(query).trim()
   if (text === '') return []
   const score = (entry: CatalogEntry): number => {
     if (String(entry.id) === text) return 0
-    const name = normalize(entry.name)
-    if (name.startsWith(text)) return 1
-    return 2
+    return entry.searchKey.startsWith(text) ? 1 : 2 // la clave empieza por el nombre normalizado
   }
-  return searchEntries(entries, query)
+  return matches
     .map((entry) => ({ entry, rank: score(entry) }))
     .sort((a, b) => a.rank - b.rank) // estable: dentro de cada grupo se mantiene el orden del catálogo
     .slice(0, limit)
