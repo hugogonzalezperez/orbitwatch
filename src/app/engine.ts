@@ -1,6 +1,6 @@
 import { MathUtils, Quaternion, Vector3 } from 'three'
 import { createGlobe } from '../globe/createGlobe'
-import { createSatellites, ISS_ID, type DataStatus, type SatelliteId, type SelectedInfo } from '../satellites/createSatellites'
+import { createSatellites, ISS_ID, type Approach, type DataStatus, type SatelliteId, type SelectedInfo } from '../satellites/createSatellites'
 import { FOCUS_TILT_DEG } from '../satellites/config'
 import type { ColorMode } from '../satellites/regimes'
 import { createCamera } from '../scene/camera'
@@ -39,6 +39,8 @@ export interface Engine {
   setHighlight(ids: ReadonlySet<number> | null): void
   /** Colorea el globo por categoría o por tipo de órbita. */
   setColorMode(mode: ColorMode): void
+  /** Pares de objetos visibles a menos de `thresholdKm` a la hora mostrada. */
+  approaches(thresholdKm: number, limit: number): Approach[]
   dispose(): void
 }
 
@@ -257,6 +259,10 @@ export function createEngine(
     setHiddenCategories(ids) {
       satellites.setHiddenCategories(ids)
       requestUpdate()
+    },
+    approaches(thresholdKm, limit) {
+      satellites.update(clock.time()) // posiciones a la hora mostrada
+      return satellites.approaches(thresholdKm, limit)
     },
     setColorMode(mode) {
       satellites.setColorMode(mode)

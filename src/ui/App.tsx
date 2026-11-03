@@ -9,6 +9,7 @@ import { ClockPanel } from './ClockPanel'
 import { formatInteger, formatSpan } from './format'
 import { GlobeCanvas } from './GlobeCanvas'
 import { useNow, useStore } from './hooks'
+import { Approaches } from './Approaches'
 import { ColorMode } from './ColorMode'
 import { Hint } from './Hint'
 import { Legend } from './Legend'
@@ -102,6 +103,7 @@ export function App() {
             <div id="rail-filters" className="rail-filters" data-open={filtersOpen}>
               <OwnerFilter engine={engine} value={owner} onChange={setOwner} />
               <ColorMode value={color} onChange={setColor} />
+              <Approaches engine={engine} />
               <Legend engine={engine} owner={owner} hidden={hidden} colorMode={color} onToggle={toggleCategory} />
             </div>
           </aside>

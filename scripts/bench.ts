@@ -7,6 +7,7 @@ import { parseColumns, toOrbitInput } from '../src/satellites/data/columns'
 import { parseManifest } from '../src/satellites/data/manifest'
 import { createBatch, createSample, propagateBatch } from '../src/satellites/propagation/batch'
 import { createSwarm } from '../src/satellites/propagation/swarm'
+import { findApproaches, findApproachesNaive } from '../src/satellites/screening'
 import { pickNearest } from '../src/scene/picking'
 
 const DATA = 'public/data'
@@ -57,4 +58,14 @@ camera.lookAt(0, 0, 0)
 let i = 0
 const picking = repeat(200, () => pickNearest(positions, swarm.size, camera, 1000, 800, 400 + i++, 400, 10))
 console.log(`  elegir bajo el puntero:      mediana ${picking.median.toFixed(3)} ms, p95 ${picking.p95.toFixed(3)} ms (primera ${picking.first.toFixed(2)} ms)`)
+
+console.log('cribado de acercamientos (pares a menos de 10 km en un instante)')
+const grid = repeat(10, () => findApproaches(positions, swarm.size, 10))
+console.log(`  con rejilla:       mediana ${grid.median.toFixed(1)} ms (primera ${grid.first.toFixed(1)} ms)`)
+const naiveStart = performance.now()
+const naive = findApproachesNaive(positions, swarm.size, 10)
+const naiveMs = performance.now() - naiveStart
+console.log(`  comparando todos:  ${naiveMs.toFixed(0)} ms (${(naiveMs / grid.median).toFixed(0)} veces más lento)`)
+const found = findApproaches(positions, swarm.size, 10)
+console.log(`  pares encontrados: ${found.length} (la ingenua, ${naive.length}); el más cercano a ${found[0]?.distanceKm.toFixed(2) ?? '-'} km`)
 swarm.dispose()

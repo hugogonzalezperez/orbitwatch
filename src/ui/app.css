@@ -91,6 +91,14 @@ button.primary:hover:not(:disabled) { background: #85b8ee; }
 .regime-key { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.75rem; margin-top: 0.25rem; font-size: 0.8125rem; }
 .regime-key li { display: flex; align-items: center; gap: 0.5rem; }
 
+.approaches summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--accent); font-weight: 500; }
+.approaches-body { display: grid; gap: 0.5rem; padding-bottom: 0.5rem; }
+.approaches-note { font-size: 0.8125rem; color: var(--ink-dim); }
+.approaches-list { list-style: none; display: grid; }
+.approaches-list button { width: 100%; justify-content: space-between; gap: 0.5rem; padding: 0 0.5rem; font-weight: 400; text-align: left; }
+.approach-names { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.approach-km { flex: none; color: var(--ink-dim); }
+
 .swatch { flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--swatch); }
 .swatch-off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--swatch); } /* oculta: hueco, no solo más apagado */
 

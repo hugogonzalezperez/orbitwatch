@@ -15,6 +15,7 @@ import { currentRevolution, orbitProgress, sampleOrbit, type Revolution } from '
 import { createTracked, stateAt, type SatelliteState, type Tracked } from './propagation/position'
 import { sunDirectionScene } from '../shared/sun'
 import { createSwarm, extrapolationSeconds, type Swarm } from './propagation/swarm'
+import { findApproaches } from './screening'
 import { createOrbitLine } from './render/orbitLine'
 import { createSatellitePoints } from './render/satellitePoints'
 import { createSwarmPoints } from './render/swarmPoints'
@@ -61,6 +62,13 @@ export interface SelectedInfo {
   orbit: Revolution | null
 }
 
+/** Dos objetos próximos en este instante. */
+export interface Approach {
+  a: { id: SatelliteId; name: string }
+  b: { id: SatelliteId; name: string }
+  distanceKm: number
+}
+
 export interface SwarmStats {
   /** Satélites del enjambre y los que SGP4 pudo calcular. */
   size: number
@@ -89,6 +97,8 @@ interface Satellites {
   setHiddenCategories(ids: ReadonlySet<string>): void
   /** Colorea el enjambre por categoría o por tipo de órbita. */
   setColorMode(mode: ColorMode): void
+  /** Los pares de objetos visibles a menos de `thresholdKm` ahora (sin contar los del mismo lanzamiento ni los acoplados), del más cercano al más lejano. */
+  approaches(thresholdKm: number, limit: number): Approach[]
   /** Radio de la órbita del seleccionado en su punto más alto, en radios terrestres desde el centro, o `null`. */
   selectedOrbitRadius(): number | null
   /** Posición del seleccionado en la escena (radios terrestres), o `null`. */
@@ -99,6 +109,7 @@ interface Satellites {
   dispose(): void
 }
 
+const DOCKED_KM = 1 // por debajo, con errores de kilómetros, son objetos juntos (la ISS y sus naves acopladas salen a 0,7 km), no un acercamiento
 const PUBLISH_INTERVAL_MS = 250 // React no necesita más de 4 actualizaciones por segundo
 
 const fetchText = async (path: string, init?: RequestInit): Promise<string> => {
@@ -258,6 +269,16 @@ export function createSatellites(
       return swarm && sample
         ? { size: swarm.size, valid: swarm.validCount(), elapsedSeconds: (lastTime - sample.epochMs) / 1000, latencyMs: swarm.latencyMs() }
         : null
+    },
+    approaches(thresholdKm, limit) {
+      if (!swarm || !columns) return []
+      swarm.positionsAt(lastTime, pickPositions) // lo oculto o inválido va lejos y no cuenta
+      const launch = (i: number): string => columns!.designator[i]!.slice(0, 8) // «1998-067» de «1998-067A»: lo del mismo lanzamiento va junto y no es noticia
+      const item = (i: number) => ({ id: columns!.id[i]!, name: names.get(columns!.id[i]!) ?? '' })
+      return findApproaches(pickPositions, swarm.size, thresholdKm, 1000)
+        .filter(({ a, b, distanceKm }) => distanceKm >= DOCKED_KM && launch(a) !== launch(b))
+        .slice(0, limit)
+        .map(({ a, b, distanceKm }) => ({ a: item(a), b: item(b), distanceKm }))
     },
     nameOf: (id) => names.get(id) ?? null,
     setHiddenCategories(ids) {
