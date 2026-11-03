@@ -1,22 +1,37 @@
-import { CATEGORIES } from '../categories'
+import { CATEGORIES, NAME_RULES } from '../categories'
 import type { GroupData } from './fetchGroups'
 import { epochDate, type OmmRecord } from './omm'
+import type { ObjectType, SatcatRow } from './satcat'
 
 export interface ClassifiedRecord {
   record: OmmRecord
   category: string
-}
-
-/** La primera categoría (por prioridad) que tenga alguno de los grupos; «otros» si ninguna. */
-export function classify(groupNames: readonly string[]): string {
-  return CATEGORIES.find((c) => c.groups.some((g) => groupNames.includes(g)))?.id ?? 'other'
+  /** Código del propietario o país (SATCAT); vacío si el SATCAT no trae el objeto. */
+  owner: string
+  type: ObjectType
+  /** Código de estado operativo; vacío en los restos y si no se conoce. */
+  status: string
+  /** Fecha de lanzamiento, AAAA-MM-DD; vacía si no se conoce. */
+  launch: string
 }
 
 /**
- * Une los grupos descargados en un solo catálogo: un registro por número de catálogo (el de época más reciente si
- * varios grupos lo traen), con su categoría, ordenado por número para que los mismos datos den siempre el mismo fichero.
+ * La categoría de un objeto. Un resto o un cuerpo de cohete (tipo del SATCAT) va a «restos» esté en el grupo que esté; si no,
+ * manda el primer grupo de la lista de categorías, y solo si es «otros» se mira el nombre.
  */
-export function assembleCatalog(data: GroupData[]): ClassifiedRecord[] {
+export function classify({ groups, name, type }: { groups: readonly string[]; name: string; type: ObjectType }): string {
+  if (type === 'DEB' || type === 'R/B') return 'debris'
+  const byGroup = CATEGORIES.find((c) => c.groups.some((g) => groups.includes(g)))?.id ?? 'other'
+  if (byGroup !== 'other') return byGroup
+  return NAME_RULES.find((rule) => rule.pattern.test(name))?.category ?? 'other'
+}
+
+/**
+ * Une los grupos descargados en un solo catálogo: un registro por número de catálogo (el de época más reciente si varios
+ * grupos lo traen), con su categoría y lo que dice el SATCAT, ordenado por número para que los mismos datos den siempre el
+ * mismo fichero.
+ */
+export function assembleCatalog(data: GroupData[], satcat: ReadonlyMap<number, SatcatRow>): ClassifiedRecord[] {
   const byId = new Map<number, { record: OmmRecord; groups: string[] }>()
   for (const { name, records } of data) {
     for (const record of records) {
@@ -29,6 +44,17 @@ export function assembleCatalog(data: GroupData[]): ClassifiedRecord[] {
     }
   }
   return [...byId.values()]
-    .map(({ record, groups }) => ({ record, category: classify(groups) }))
+    .map(({ record, groups }): ClassifiedRecord => {
+      const row = satcat.get(record.NORAD_CAT_ID)
+      const type = row?.type ?? 'UNK'
+      return {
+        record,
+        category: classify({ groups, name: record.OBJECT_NAME, type }),
+        owner: row?.owner ?? '',
+        type,
+        status: row?.status ?? '',
+        launch: row?.launch ?? '',
+      }
+    })
     .sort((a, b) => a.record.NORAD_CAT_ID - b.record.NORAD_CAT_ID)
 }

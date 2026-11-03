@@ -38,6 +38,13 @@ jobs:
         uses: actions/configure-pages@v6
       - run: npm ci
       - run: npm test
+      # Lo ya descargado de CelesTrak (≈ 4 MB comprimido) pasa de una ejecución a la siguiente: así cada 2 h solo se pide `active`,
+      # y el resto de grupos y el SATCAT, una vez al día. Una clave nueva por ejecución, porque una caché guardada no se modifica.
+      - uses: actions/cache@v6
+        with:
+          path: .cache/celestrak
+          key: celestrak-${{ github.run_id }}
+          restore-keys: celestrak-
       - name: Datos
         env:
           EVENT: ${{ github.event_name }}

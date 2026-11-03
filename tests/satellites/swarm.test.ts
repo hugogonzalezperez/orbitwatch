@@ -11,7 +11,7 @@ import type { OrbitInput } from '../../src/satellites/data/columns'
 import { createInlineTransport, type PropagationTransport } from '../../src/satellites/propagation/transport'
 import { encodeColumns } from '../../src/satellites/data/columns'
 import type { OmmRecord } from '../../src/satellites/data/omm'
-import { stationRecords } from '../helpers/fixtures'
+import { classified, stationRecords } from '../helpers/fixtures'
 
 const records = stationRecords()
 const t = epochDate(records[0]!).getTime() + 3_600_000
@@ -28,7 +28,7 @@ type Options = NonNullable<Parameters<typeof createSwarm>[2]>
 
 /** Un enjambre con una categoría por grupo, en el orden dado. */
 const build = (groups: TestGroup[], options: Options = {}) => {
-  const columns = encodeColumns(groups.flatMap((g) => g.records.map((record) => ({ record, category: g.id }))))
+  const columns = encodeColumns(groups.flatMap((g) => g.records.map((record) => classified(record, g.id))))
   const styles = columns.categories.map((id) => {
     const group = groups.find((g) => g.id === id)
     return { id, rgb: group?.rgb ?? ([1, 1, 1] as const), opacity: group?.opacity ?? 1 }

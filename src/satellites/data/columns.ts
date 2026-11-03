@@ -27,6 +27,11 @@ export interface CatalogColumns {
   name: string[]
   designator: string[]
   epoch: string[]
+  /** Del SATCAT: código del propietario o país, tipo de objeto, código de estado operativo y fecha de lanzamiento (AAAA-MM-DD). */
+  owner: string[]
+  type: string[]
+  status: string[]
+  launch: string[]
   meanMotion: number[]
   eccentricity: number[]
   inclination: number[]
@@ -39,7 +44,7 @@ export interface CatalogColumns {
 }
 
 const NUMBER_COLUMNS = ['category', 'id', 'meanMotion', 'eccentricity', 'inclination', 'raan', 'argPerigee', 'meanAnomaly', 'bstar', 'ndot', 'nddot'] as const
-const STRING_COLUMNS = ['name', 'designator', 'epoch'] as const
+const STRING_COLUMNS = ['name', 'designator', 'epoch', 'owner', 'type', 'status', 'launch'] as const
 const ELEMENT_COLUMNS = ['meanMotion', 'eccentricity', 'inclination', 'raan', 'argPerigee', 'meanAnomaly', 'bstar', 'ndot', 'nddot'] as const
 
 export function encodeColumns(entries: ClassifiedRecord[]): CatalogColumns {
@@ -56,6 +61,10 @@ export function encodeColumns(entries: ClassifiedRecord[]): CatalogColumns {
     name: entries.map((e) => e.record.OBJECT_NAME),
     designator: entries.map((e) => e.record.OBJECT_ID),
     epoch: entries.map((e) => e.record.EPOCH),
+    owner: entries.map((e) => e.owner),
+    type: entries.map((e) => e.type),
+    status: entries.map((e) => e.status),
+    launch: entries.map((e) => e.launch),
     meanMotion: pick((r) => r.MEAN_MOTION),
     eccentricity: pick((r) => r.ECCENTRICITY),
     inclination: pick((r) => r.INCLINATION),

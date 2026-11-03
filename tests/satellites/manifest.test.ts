@@ -7,7 +7,7 @@ const groups = [
   { group: 'stations', count: 20 },
   { group: 'weather', count: 74 },
 ]
-const valid = { schemaVersion: 3, generatedAt: '2026-11-01T23:12:50Z', catalog, groups }
+const valid = { schemaVersion: 4, generatedAt: '2026-11-01T23:12:50Z', catalog, groups }
 
 describe('parseManifest', () => {
   it('lee la fecha de generación, el catálogo y los grupos', () => {
@@ -24,7 +24,7 @@ describe('parseManifest', () => {
   })
 
   it('rechaza otra versión del formato: un manifiesto viejo no debe leerse como si fuera el nuevo', () => {
-    expect(() => parseManifest({ ...valid, schemaVersion: 2 })).toThrow(/versión/)
+    expect(() => parseManifest({ ...valid, schemaVersion: 3 })).toThrow(/versión/)
     expect(() => parseManifest({ ...valid, schemaVersion: undefined })).toThrow(/versión/)
   })
 

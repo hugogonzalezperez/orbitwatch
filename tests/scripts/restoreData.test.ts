@@ -6,10 +6,10 @@ import { restoreData } from '../../scripts/restoreData'
 import { encodeColumns } from '../../src/satellites/data/columns'
 import { catalogFileName, serializeManifest } from '../../src/satellites/data/manifest'
 import { sha256Hex } from '../../src/shared/hash'
-import { stationRecords } from '../helpers/fixtures'
+import { classified, stationRecords } from '../helpers/fixtures'
 
 const BASE = 'https://ejemplo.github.io/orbitwatch'
-const catalogText = JSON.stringify(encodeColumns(stationRecords().map((record) => ({ record, category: 'stations' }))))
+const catalogText = JSON.stringify(encodeColumns(stationRecords().map((record) => classified(record))))
 const sha256 = await sha256Hex(catalogText)
 const file = catalogFileName(sha256)
 const manifestText = serializeManifest(new Date('2026-11-02T20:00:00Z'), { file, count: 20, sha256 }, [{ group: 'stations', count: 20 }])

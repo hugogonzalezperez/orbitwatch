@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { CATEGORIES } from '../../src/satellites/categories'
 import { ELEMENT_FIELDS, encodeColumns, parseColumns, recordAt, toOrbitInput } from '../../src/satellites/data/columns'
-import { stationRecords } from '../helpers/fixtures'
+import { classified, stationRecords } from '../helpers/fixtures'
 
 const records = stationRecords()
-const entries = records.map((record, i) => ({ record, category: i < 10 ? 'stations' : 'weather' }))
+const entries = records.map((record, i) => classified(record, i < 10 ? 'stations' : 'weather', i === 4 ? { owner: 'CIS', type: 'DEB', status: '', launch: '2011-07-18' } : {}))
 const columns = encodeColumns(entries)
 const through = () => JSON.parse(JSON.stringify(columns)) as Record<string, unknown>
 
@@ -18,9 +18,17 @@ describe('encodeColumns', () => {
   })
 
   it('una categoría que no está en la lista se añade al final de la tabla', () => {
-    const odd = encodeColumns([{ record: records[0]!, category: 'rara' }])
+    const odd = encodeColumns([classified(records[0]!, 'rara')])
     expect(odd.categories.at(-1)).toBe('rara')
     expect(odd.categories[odd.category[0]!]).toBe('rara')
+  })
+
+  it('guarda el propietario, el tipo, el estado y la fecha de lanzamiento de cada objeto', () => {
+    expect(columns.owner[0]).toBe('US')
+    expect(columns.type[0]).toBe('PAY')
+    expect(columns.status[0]).toBe('+')
+    expect(columns.launch[0]).toBe('2020-01-01')
+    expect([columns.owner[4], columns.type[4], columns.status[4], columns.launch[4]]).toEqual(['CIS', 'DEB', '', '2011-07-18'])
   })
 
   it('sin objetos, columnas vacías', () => {
@@ -43,6 +51,8 @@ describe('parseColumns', () => {
     ['algo que no es un objeto', () => 'x'],
     ['null', () => null],
     ['una columna ausente', () => { const c = through(); delete c.bstar; return c }],
+    ['sin la columna del propietario (un catálogo de antes del SATCAT)', () => { const c = through(); delete c.owner; return c }],
+    ['un tipo que no es texto', () => { const c = through(); ;(c.type as unknown[])[2] = 1; return c }],
     ['una columna que no es una lista', () => ({ ...through(), name: 'x' })],
     ['columnas de distinta longitud', () => ({ ...through(), id: [1, 2, 3] })],
     ['un número que no es finito (null en JSON)', () => { const c = through(); ;(c.bstar as unknown[])[3] = null; return c }],
