@@ -32,13 +32,13 @@ Sacar el cálculo de los satélites del hilo principal y poder medir en cualquie
 
 ## Fase C: publicar
 
-- [ ] **C1.** Script de datos para integración continua (una descarga, validación, copia del último conjunto válido si CelesTrak falla).
-- [ ] **C2.** GitHub Action programada cada 2 h (minuto 17, que no coincide con la hora en punto) que descarga, construye y despliega en GitHub Pages.
-- [ ] **C3.** Decidir dirección: subdominio de tu dominio (CNAME) o ruta; configurar la base de la aplicación según la elección.
-- [ ] **C4.** Comprobar en producción que CelesTrak no bloquea las IPs de la Action (riesgo abierto).
+- [x] **C1.** Restauración de datos desde el sitio publicado (`scripts/restoreData.ts`, con hash y recuento) y script de integración continua (`scripts/ci-data.sh`: solo el despliegue programado o manual descarga de CelesTrak; si falla, se republica la última copia buena).
+- [x] **C2.** GitHub Action (`deploy.yml`): tests, datos, build con la ruta base de Pages y despliegue; cada 2 h (minuto 17), en cada cambio en `main` y manual.
+- [x] **C3.** Dirección decidida: primero la URL de GitHub (`https://hugogonzalezperez.github.io/orbitwatch/`); el subdominio con el DNS en Vercel queda preparado en [DESPLIEGUE.md](DESPLIEGUE.md).
+- [ ] **C4.** Activar Pages, primer despliegue y comprobar en producción que CelesTrak no bloquea las IPs de la Action (riesgo abierto). Dos ejecuciones programadas seguidas correctas.
 - [ ] **C5.** Medir en una GPU real con `?perf` y documentarlo.
 
-**Criterio:** URL pública que se refresca sola, dos ejecuciones programadas seguidas correctas y cifras de una GPU real.
+**Criterio:** URL pública que se refresca sola, dos ejecuciones programadas seguidas correctas y cifras de una GPU real. **Pendiente de C4:** el primer despliegue descarga de CelesTrak, así que se hace pasadas 2 h desde la última descarga local (la del 2026-11-02 a las 23:51 UTC).
 
 ## Fase D: más datos
 

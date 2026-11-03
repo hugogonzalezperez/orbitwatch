@@ -2,7 +2,7 @@
 
 Visualizador 3D de satélites en órbita, en el navegador, sobre una Tierra real y con una hora simulada que se puede adelantar y atrasar. Proyecto de portfolio, con el rendimiento medido y cada decisión técnica explicada.
 
-> Demo: aún sin publicar.
+> Demo: <https://hugogonzalezperez.github.io/orbitwatch/> (se publica con una GitHub Action; ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)).
 
 ![OrbitWatch: la ISS seleccionada sobre el Pacífico, con su órbita y su ficha](docs/captura.jpg)
 
@@ -63,7 +63,8 @@ Resumen; el detalle y los motivos, en la documentación.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md): cómo encajan las piezas, flujo de datos y estructura de carpetas.
 - [docs/DECISIONES.md](docs/DECISIONES.md): cada decisión, por qué, qué alternativas se descartaron y las fuentes consultadas.
-- [docs/DATOS.md](docs/DATOS.md): origen de los datos, política de CelesTrak, validación, frescura y tamaños.
+- [docs/DATOS.md](docs/DATOS.md): origen de los datos, categorías, política de CelesTrak, validación, frescura y tamaños.
+- [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md): cómo se publica y se refresca, y qué pasa si CelesTrak falla.
 - [docs/RENDIMIENTO.md](docs/RENDIMIENTO.md): qué está medido (y cómo) y qué no.
 - [docs/CONVENCIONES.md](docs/CONVENCIONES.md): reglas del código y los problemas encontrados por el camino.
 - [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md): qué falta para darlo por concluido, por fases.

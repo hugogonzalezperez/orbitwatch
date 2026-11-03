@@ -20,7 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "data": "tsx scripts/update-data.ts",
-    "bench": "tsx scripts/bench.ts"
+    "bench": "tsx scripts/bench.ts",
+    "data:restore": "tsx scripts/restore-data.ts"
   },
   "dependencies": {
     "@fontsource-variable/source-serif-4": "^5.3.1",

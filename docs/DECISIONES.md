@@ -119,12 +119,12 @@ La altitud y la vuelta comparten el mismo trazo de instrumento con marcas. La re
 ### Solo escritorio, por ahora
 Móvil y ventanas estrechas no están resueltos.
 
-## Alojamiento y dominio (decisión abierta)
+## Alojamiento y dominio
 
-- **GitHub Pages** exige que el repositorio sea público o de pago (comprobado en los ajustes del repositorio el 2026-11-02). Con repositorio público es gratis, el mismo origen para web y datos (sin CORS) y admite dominio propio con HTTPS.
-- **Cloudflare Pages** se puede usar con el repositorio privado desplegando el resultado construido con `wrangler pages deploy` desde la Action. Plan gratuito: 500 builds al mes, 20 000 ficheros y 25 MiB por fichero (documentación de Cloudflare). Permite controlar cabeceras de caché con un fichero `_headers`.
-- **Datos cada 2 h:** una GitHub Action programada (cron) descarga, construye y despliega, sin hacer commits cada 2 h. Los crons solo corren en la rama por defecto y los de los repositorios públicos se desactivan tras 60 días sin actividad.
-- **Riesgo sin comprobar:** si CelesTrak bloquea las IPs de los ejecutores de GitHub (o de Cloudflare). La política dice que ante cualquier respuesta distinta de 200 se detiene todo.
+**GitHub Pages con el repositorio público.** GitHub Pages exige repositorio público o de pago (comprobado en los ajustes del repositorio el 2026-11-02). Con el repositorio público es gratis, el mismo origen para web y datos (sin CORS) y admite dominio propio con HTTPS. Para un portfolio, además, que el código se pueda leer es parte del valor. **Alternativa descartada:** Cloudflare Pages con el repositorio privado, desplegando el resultado construido con `wrangler pages deploy` desde la Action (plan gratuito: 500 builds al mes, 20 000 ficheros y 25 MiB por fichero; documentación de Cloudflare). Permite controlar las cabeceras de caché, pero añade una cuenta y secretos.
+**Dirección.** Primero la URL de GitHub (`https://hugogonzalezperez.github.io/orbitwatch/`); un subdominio con el DNS en Vercel se añade después con un registro `CNAME` sin tocar el código ([DESPLIEGUE.md](DESPLIEGUE.md)).
+**Los datos se refrescan con la propia Action**, cada 2 h, sin hacer commits: solo el despliegue programado descarga de CelesTrak; un cambio de código reutiliza los datos ya publicados; si CelesTrak falla, se republica la última copia buena. Los crons de GitHub solo corren en la rama por defecto y los de los repositorios públicos se desactivan tras 60 días sin actividad.
+**Riesgo sin comprobar:** si CelesTrak bloquea las IPs de los ejecutores de GitHub. La política dice que ante cualquier respuesta distinta de 200 se detiene todo, y la Action lo cumple.
 
 ## Fuentes consultadas
 

@@ -89,15 +89,16 @@ interface Satellites {
 const EARTH_EQUATORIAL_KM = 6378.137 // las altitudes de los elementos orbitales se cuentan desde el ecuador
 const PUBLISH_INTERVAL_MS = 250 // React no necesita más de 4 actualizaciones por segundo
 
-const fetchText = async (path: string): Promise<string> => {
-  const response = await fetch(`${import.meta.env.BASE_URL}${path}`)
+const fetchText = async (path: string, init?: RequestInit): Promise<string> => {
+  const response = await fetch(`${import.meta.env.BASE_URL}${path}`, init)
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   return response.text()
 }
 
 /** Descarga el catálogo que indica el manifiesto (`npm run data`), comprueba que llegó entero y lo lee. */
 async function loadCatalog(): Promise<{ generatedAt: Date; columns: CatalogColumns }> {
-  const { generatedAt, catalog } = parseManifest(JSON.parse(await fetchText('data/manifest.json')))
+  // El manifiesto se revalida siempre: nombra un catálogo con hash, y uno cacheado apuntaría a un fichero que ya no existe.
+  const { generatedAt, catalog } = parseManifest(JSON.parse(await fetchText('data/manifest.json', { cache: 'no-cache' })))
   const text = await fetchText(`data/${catalog.file}`)
   if (globalThis.crypto?.subtle) {
     if ((await sha256Hex(text)) !== catalog.sha256) throw new Error('el catálogo no coincide con su hash: la descarga llegó incompleta o alterada')

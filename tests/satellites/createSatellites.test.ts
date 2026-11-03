@@ -21,9 +21,11 @@ const FILES: Record<string, string> = {
   }),
   [catalogFile]: catalogText,
 }
+const requests: Array<{ name: string; init?: RequestInit }> = []
 const serve = (files: Record<string, string>) =>
-  vi.stubGlobal('fetch', async (url: string) => {
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     const name = String(url).split('/').pop()!
+    requests.push({ name, init })
     return name in files ? new Response(files[name]) : new Response('', { status: 404 })
   })
 
@@ -51,6 +53,14 @@ describe('createSatellites: carga', () => {
     expect(data.catalog.slice(10).every((e) => e.category === 'weather')).toBe(true)
     expect(data.downloadedAt.toISOString()).toBe('2026-11-02T00:00:00.000Z')
     expect(onChange).toHaveBeenCalledTimes(1)
+    satellites.dispose()
+  })
+
+  it('revalida el manifiesto en cada carga, pero no el catálogo (su nombre lleva el hash y no cambia)', async () => {
+    requests.length = 0
+    const satellites = await open()
+    expect(requests.find((r) => r.name === 'manifest.json')!.init?.cache).toBe('no-cache')
+    expect(requests.find((r) => r.name === catalogFile)!.init?.cache).toBeUndefined()
     satellites.dispose()
   })
 

@@ -7,7 +7,7 @@ Cómo encajan las piezas hoy. El porqué de cada decisión, con sus alternativas
 No hay backend. Solo un proceso fuera del navegador habla con CelesTrak; el navegador nunca lo hace.
 
 ```
-CelesTrak ──(20 grupos, 1 petición cada uno, ≤ 1 vez cada 2 h, con caché local)──> npm run data  (Action programada: pendiente)
+CelesTrak ──(20 grupos, 1 petición cada uno, ≤ 1 vez cada 2 h, con caché local)──> npm run data  (y la Action programada)
                                                          │ valida (HTTP 200, esquema, nº de objetos)
                                                          │ une, deduplica y clasifica por función
                                                          ▼
@@ -24,7 +24,7 @@ Navegador: manifest → catálogo (comprueba el hash) → columnas → lista del
 - **Fuente:** API GP de CelesTrak en OMM JSON (`FORMAT=json`). TLE queda descartado: hay números de catálogo de 6 dígitos. Grupos, categorías y tamaños en [docs/DATOS.md](docs/DATOS.md).
 - **Política de CelesTrak:** actualiza cada 2 h; una descarga por actualización; parar ante cualquier respuesta distinta de 200. Por eso existe la capa estática intermedia.
 - **Frescura:** `manifest.json` guarda cuándo se descargaron (no es la época de cada objeto). La ficha resume en una frase el peor aviso entre la edad de la descarga (3 h aviso, 6 h desactualizado) y la distancia entre la hora simulada y la época (3 días la precisión baja, 7 poco fiable). Pendiente: copia del último conjunto válido si CelesTrak falla.
-- **Alojamiento:** sin decidir; ver [DECISIONES.md](docs/DECISIONES.md#alojamiento-y-dominio-decisión-abierta). Pendiente la Action que refresque y despliegue.
+- **Alojamiento:** GitHub Pages con el repositorio público; una Action refresca los datos cada 2 h y despliega ([docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)).
 
 ## Tiempo y marco de referencia
 
@@ -89,11 +89,12 @@ src/
   ui/           React: App, GlobeCanvas, Search, Legend, VirtualList, virtual, SelectedCard, Rulers, ClockPanel,
                 reliability, hooks, format, icons
   shared/       units, frames (TEME ↔ escena), sun (dirección del Sol), store (puente motor → React)
-scripts/        build-textures.sh, update-data.ts (`npm run data`), cachedFetch.ts (caché local de 2 h), bench.ts (`npm run bench`)
+scripts/        build-textures.sh, update-data.ts (`npm run data`), cachedFetch.ts (caché local de 2 h), restoreData.ts y
+                restore-data.ts (`npm run data:restore`), ci-data.sh, bench.ts (`npm run bench`)
 public/         data/ (generado por `npm run data`, no se versiona), textures/earth/ (KTX2)
 tests/          espeja src/; datos reales de CelesTrak en tests/fixtures
 docs/           DECISIONES, DATOS, RENDIMIENTO, CONVENCIONES
-.github/workflows/  refresco de datos y despliegue [pendiente]
+.github/workflows/  despliegue y refresco de datos cada 2 h
 ```
 
 Dependencias, sin ciclos: `ui` → `app` → `scene`, `globe` y `satellites` → `shared`. Esas tres capas no se conocen entre sí; las junta `app`.
