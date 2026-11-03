@@ -119,8 +119,26 @@ Cada categoría muestra su color, su recuento y un interruptor que la oculta en 
 ### Una regla graduada como motivo propio
 La altitud y la vuelta comparten el mismo trazo de instrumento con marcas. La regla de altitud (0 a 40 000 km, escala de raíz cuadrada para que la órbita baja no se pegue a la superficie) marca la ISS, el GPS y la órbita geoestacionaria, y da sentido a «425 km».
 
-### Solo escritorio, por ahora
-Móvil y ventanas estrechas no están resueltos.
+### El estado va en la dirección
+`?sat=25544&owner=US&hide=starlink&color=regime` reproduce lo que se ve: satélite, país u operador, categorías ocultas y modo de color. La dirección se reescribe con `history.replaceState` (sin llenar el historial) y solo con lo que se aparta de lo habitual; `src/app/urlState.ts` lo lee y lo escribe con validación (un `owner` o un `hide` con forma rara se ignora) y con tests. La hora no se escribe sola, porque cambia cada segundo: «Copiar enlace» la añade (`t=`) si el reloj no marca la hora real. **Motivo:** compartir un satélite a una hora sin cuentas ni servidor. Los ajustes que llegan antes de que cargue el enjambre (los filtros de un enlace) se guardan y se aplican al crearlo; antes se perdían.
+
+### Colorear por función o por órbita
+El color por categoría responde «qué es»; el color por tipo de órbita (baja, media, geosíncrona, elíptica, alta) responde «dónde está». Es una opción, no un reemplazo. El tipo de cada satélite se calcula al cargar con `regimeOf` (el mismo criterio que la ficha, sin construir registros) y el enjambre elige color por hueco; la opacidad sigue siendo la de la categoría, para que Starlink no tape al resto. El ámbar sigue reservado al seleccionado.
+
+### Cribado de acercamientos: una instantánea con rejilla
+«Acercamientos ahora» lista los pares de objetos visibles a menos de 10 km a la hora mostrada. Una rejilla con celdas del tamaño del umbral deja a cada objeto solo sus 27 celdas vecinas y la distancia exacta decide (`src/satellites/screening.ts`): unos 27 ms con 19 612 objetos frente a unos 8 s comparando todos con todos (`npm run bench`). **No es una predicción de colisión:** es una distancia en un instante con elementos públicos de errores de kilómetros, y el panel lo dice. Se descartan los pares del mismo lanzamiento y los de menos de 1 km (la ISS y sus naves acopladas salen a 0,7 km por ese error). **Alternativa descartada:** buscar el instante de máximo acercamiento (TCA) en una ventana de tiempo; exigiría propagar toda la ventana y refinar cada par, y la precisión de los datos no lo justifica.
+
+### Móvil: hoja inferior y filtros plegables
+Por debajo de 48 rem el buscador queda arriba con un botón que despliega los filtros y las categorías, y la ficha pasa a ser una hoja sobre el reloj (que se reorganiza en tres filas). Al elegir un satélite los filtros se pliegan. Comprobado en 390 × 844 sin desbordamiento horizontal.
+
+### Política de contenido en el build
+GitHub Pages no permite cabeceras, así que el build lleva una etiqueta `Content-Security-Policy` (solo recursos del propio sitio, `wasm-unsafe-eval` para SGP4 y las texturas, `form-action 'none'`, `object-src 'none'`). Solo en el build: el servidor de desarrollo inyecta scripts. Comprobado en el navegador sin violaciones.
+
+### El paquete de JavaScript no se parte
+932 kB sin comprimir y 265 kB comprimido, más 20 kB del Worker y el transcodificador de texturas aparte. Partirlo en trozos (three, React, satellite.js) no reduciría lo que se descarga la primera vez, y los nombres de los ficheros llevan hash: el redespliegue cada 2 h solo cambia los datos, así que la caché del navegador ya reutiliza el JavaScript. Se deja como está; el aviso de tamaño de Vite es informativo.
+
+### Pruebas de humo y accesibilidad automáticas
+`npm run e2e` (Playwright con el Chrome del sistema y renderizado por software, contra el build) comprueba lo esencial: carga, 13 categorías, ficha de la ISS, búsqueda, enlace con estado, filtro por país, salto de hora y acercamientos, y pasa axe (WCAG 2.0/2.1 A y AA) sobre dos estados. La política de contenido bloquea el `new Function` con el que Playwright evalúa en la página; esos errores son de la herramienta y se filtran (la app no los produce). Axe corre con la política desactivada porque se inyecta como script.
 
 ## Alojamiento y dominio
 

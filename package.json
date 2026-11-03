@@ -21,7 +21,8 @@
     "test": "vitest run",
     "data": "tsx scripts/update-data.ts",
     "bench": "tsx scripts/bench.ts",
-    "data:restore": "tsx scripts/restore-data.ts"
+    "data:restore": "tsx scripts/restore-data.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/source-serif-4": "^5.3.1",
@@ -32,6 +33,8 @@
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

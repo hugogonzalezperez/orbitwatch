@@ -97,8 +97,8 @@ interface Satellites {
   setHiddenCategories(ids: ReadonlySet<string>): void
   /** Colorea el enjambre por categoría o por tipo de órbita. */
   setColorMode(mode: ColorMode): void
-  /** Los pares de objetos visibles a menos de `thresholdKm` ahora (sin contar los del mismo lanzamiento ni los acoplados), del más cercano al más lejano. */
-  approaches(thresholdKm: number, limit: number): Approach[]
+  /** Los pares de objetos visibles a menos de `thresholdKm` ahora (sin contar los del mismo lanzamiento ni los acoplados), del más cercano al más lejano; `null` si aún no hay posiciones calculadas. */
+  approaches(thresholdKm: number, limit: number): Approach[] | null
   /** Radio de la órbita del seleccionado en su punto más alto, en radios terrestres desde el centro, o `null`. */
   selectedOrbitRadius(): number | null
   /** Posición del seleccionado en la escena (radios terrestres), o `null`. */
@@ -271,7 +271,7 @@ export function createSatellites(
         : null
     },
     approaches(thresholdKm, limit) {
-      if (!swarm || !columns) return []
+      if (!swarm?.sample() || !columns) return null
       swarm.positionsAt(lastTime, pickPositions) // lo oculto o inválido va lejos y no cuenta
       const launch = (i: number): string => columns!.designator[i]!.slice(0, 8) // «1998-067» de «1998-067A»: lo del mismo lanzamiento va junto y no es noticia
       const item = (i: number) => ({ id: columns!.id[i]!, name: names.get(columns!.id[i]!) ?? '' })

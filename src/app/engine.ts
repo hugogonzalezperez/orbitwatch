@@ -40,7 +40,7 @@ export interface Engine {
   /** Colorea el globo por categoría o por tipo de órbita. */
   setColorMode(mode: ColorMode): void
   /** Pares de objetos visibles a menos de `thresholdKm` a la hora mostrada. */
-  approaches(thresholdKm: number, limit: number): Approach[]
+  approaches(thresholdKm: number, limit: number): Approach[] | null
   dispose(): void
 }
 

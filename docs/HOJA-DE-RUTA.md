@@ -2,7 +2,7 @@
 
 Qué falta para dar OrbitWatch por concluido, en fases con hitos comprobables. Se marca cada casilla cuando está hecha **y verificada**; el criterio de cada fase dice cómo se comprueba. Las decisiones y su motivo están en [DECISIONES.md](DECISIONES.md); lo medido, en [RENDIMIENTO.md](RENDIMIENTO.md); los términos técnicos, en [GLOSARIO.md](GLOSARIO.md).
 
-Estado a 2026-11-02: las fases A y B están hechas. La web funciona de punta a punta con ~11 250 satélites (ISS, estaciones, meteorología y Starlink) y el cálculo va en un Worker, pero los datos se descargan a mano y no hay despliegue.
+Estado a 2026-11-03: las fases A a F están hechas salvo el vídeo del README (F4) y las mediciones en una GPU real (C5). La web está publicada en <https://hugogonzalezperez.github.io/orbitwatch/> con 19 612 objetos, se refresca sola cada 2 h y el primer despliegue ya descargó de CelesTrak desde los servidores de GitHub.
 
 ## Fase A: corrección y limpieza
 
@@ -35,7 +35,7 @@ Sacar el cálculo de los satélites del hilo principal y poder medir en cualquie
 - [x] **C1.** Restauración de datos desde el sitio publicado (`scripts/restoreData.ts`, con hash y recuento) y script de integración continua (`scripts/ci-data.sh`: solo el despliegue programado o manual descarga de CelesTrak; si falla, se republica la última copia buena).
 - [x] **C2.** GitHub Action (`deploy.yml`): tests, datos, build con la ruta base de Pages y despliegue; cada 2 h (minuto 17), en cada cambio en `main` y manual.
 - [x] **C3.** Dirección decidida: primero la URL de GitHub (`https://hugogonzalezperez.github.io/orbitwatch/`); el subdominio con el DNS en Vercel queda preparado en [DESPLIEGUE.md](DESPLIEGUE.md).
-- [ ] **C4.** Activar Pages, primer despliegue y comprobar en producción que CelesTrak no bloquea las IPs de la Action (riesgo abierto). Dos ejecuciones programadas seguidas correctas.
+- [x] **C4.** Pages activado y primer despliegue hecho el 2026-11-03 (2 min); CelesTrak respondió a las IPs de GitHub. Queda ver dos ejecuciones programadas seguidas correctas.
 - [ ] **C5.** Medir en una GPU real con `?perf` y documentarlo.
 
 **Criterio:** URL pública que se refresca sola, dos ejecuciones programadas seguidas correctas y cifras de una GPU real. **Pendiente de C4:** el primer despliegue descarga de CelesTrak, así que se hace pasadas 2 h desde la última descarga local (la del 2026-11-02 a las 23:51 UTC).
@@ -55,26 +55,26 @@ Sacar el cálculo de los satélites del hilo principal y poder medir en cualquie
 - [x] **D3. Caché local y pausa entre grupos** en el script de datos.
 - [x] **D4. Restos ocultos por defecto** y colores por categoría comprobados (todas las marcas, entre 4,9:1 y 15,1:1 sobre el panel).
 - [x] **D5. SATCAT y mejor clasificación:** 40 grupos de CelesTrak y el SATCAT (6,8 MB, una petición); el tipo separa restos y cuerpos de cohete, unas pocas reglas por nombre recogen familias sin grupo («Otros activos» baja de 3 518 a 1 377); la ficha muestra propietario, tipo, lanzamiento y estado, y la columna izquierda filtra por país u operador (leyenda, búsqueda y globo). Caché escalonada (`active` 100 min, el resto 22 h) que la Action conserva entre ejecuciones. Catálogo v4: 19 612 objetos, 3,41 MB (821 kB comprimido).
-- [ ] **D6. Colores por régimen orbital** (opción de coloreado).
+- [x] **D6. Colores por régimen orbital:** opción «Colorear por: Función | Órbita» con su clave de colores (`regimes.ts`, `regimeOf`, modo de color en el enjambre; también en la dirección).
 
 **Criterio:** el catálogo ampliado carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo: medido con `?perf` y `npm run bench`. **Cumplido para D1 a D5:** 19 612 objetos (el porcentaje de JavaScript en el navegador, 5,3 a 5,6 % a ×10 frente a 5,5 % con 11 250, se midió con 19 520; el banco de Node sí se repitió con 19 612); los restos parten ocultos. Con D5 el cálculo por actualización no cambia (ver [RENDIMIENTO.md](RENDIMIENTO.md)). Queda D6 (colores por régimen).
 
 ## Fase E: diseño y experiencia de uso
 
-- [ ] **E1.** Móvil: la columna y la ficha pasan a una hoja inferior.
-- [ ] **E2.** URL con estado (`?sat=…`, categorías ocultas) para compartir un satélite a una hora.
-- [ ] **E3.** Saltar a una fecha y hora desde el reloj.
-- [ ] **E4.** Seguir al satélite con la cámara al acelerar el tiempo.
-- [ ] **E5.** Primer uso: una ayuda corta de los gestos.
-- [ ] **E6.** Detalles de la ficha (el desplegable «Ver el detalle» es poco visible) y filas de 44 px.
+- [x] **E1.** Móvil: buscador arriba con filtros plegables y la ficha como hoja inferior (≤ 48 rem).
+- [x] **E2.** URL con estado (`?sat=…&owner=…&hide=…&color=…`) y «Copiar enlace», que añade la hora si no es la real.
+- [x] **E3.** «Ir a…»: salta a una fecha y hora UTC.
+- [x] **E4.** «Seguir»: la cámara acompaña al satélite en su órbita.
+- [x] **E5.** Ayuda corta de los gestos que desaparece al tocar algo.
+- [x] **E6.** «Ver el detalle» más visible y filas de 44 px.
 
 ## Fase F: cribado y entrega
 
-- [ ] **F1.** Cribado de acercamientos en cascada (altitud, rejilla espacial, refinado) con panel de resultados y benchmark frente a la versión ingenua, publicado en el README.
-- [ ] **F2.** Prueba de humo con Playwright.
-- [ ] **F3.** Pasada de accesibilidad con teclado y lector de pantalla.
-- [ ] **F4.** README con la URL, vídeo corto y cifras finales.
-- [ ] **F5.** Partir el paquete de JavaScript (910 kB sin comprimir, 259 kB comprimido) si la medición lo justifica.
+- [x] **F1.** Cribado de acercamientos con rejilla espacial y distancia exacta, panel de resultados y benchmark: 27 ms frente a 8 s comparando todos con todos (19 612 objetos).
+- [x] **F2.** Prueba de humo con Playwright (`npm run e2e`, 6 pruebas).
+- [x] **F3.** Axe (WCAG A y AA) sin infracciones en dos estados; el teclado ya se cubría en la fase A. Sin probar con un lector de pantalla real.
+- [ ] **F4.** README con la URL (hecho), vídeo corto (pendiente) y cifras finales.
+- [x] **F5.** Medido: 932 kB (265 kB comprimido). No se parte, porque no reduce la primera descarga y el hash ya permite reutilizarlo en caché (ver [DECISIONES.md](DECISIONES.md)).
 
 ## Decisiones abiertas
 

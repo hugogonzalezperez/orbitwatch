@@ -63,7 +63,7 @@ Navegador: manifest → catálogo (comprueba el hash) → columnas → lista del
 
 React solo aloja el canvas y los paneles. El motor 3D es imperativo (`app/engine.ts`) y expone un `Engine` (reloj, estado de los datos y del seleccionado como `Store`, `select`, `focusSelected`, `setHighlight`, `setHiddenCategories`); React se suscribe con `useSyncExternalStore`. Diseño visual en [DESIGN.md](DESIGN.md).
 
-- `ui/App.tsx` (nombre y línea viva), `Search`, `OwnerFilter` (país u operador: limita leyenda, búsqueda y globo), `Legend` (categorías con interruptor; listas con `VirtualList`, de ventana virtual: filas de 40 px y solo se pintan las visibles), `SelectedCard` con `Rulers` (reglas de altitud y de vuelta), `ClockPanel`, `reliability` (frase de fiabilidad de los datos).
+- `ui/App.tsx` (nombre y línea viva), `Search`, `OwnerFilter` (país u operador: limita leyenda, búsqueda y globo), `ColorMode` (función u órbita), `Approaches` (acercamientos ahora), `Hint`, `Legend` (categorías con interruptor; listas con `VirtualList`, de ventana virtual: filas de 44 px y solo se pintan las visibles), `SelectedCard` con `Rulers` (reglas de altitud y de vuelta), `ClockPanel`, `reliability` (frase de fiabilidad de los datos).
 - Las etiquetas del seleccionado y de lo que hay bajo el puntero (`app/labels.ts`) son DOM imperativo, no React, porque se recolocan en cada fotograma.
 
 ## Rendimiento
@@ -76,7 +76,7 @@ Pendiente: calidad adaptativa por tiempo de frame, cribado de acercamientos en c
 
 ```
 src/
-  app/          engine.ts (compone las piezas y devuelve el Engine), clock.ts, startTime.ts, labels.ts, perf.ts, perfHud.ts
+  app/          engine.ts (compone las piezas y devuelve el Engine), clock.ts, urlState.ts (estado en la dirección), labels.ts, perf.ts, perfHud.ts
   scene/        infraestructura 3D común: config (zoom, cámara, píxeles), renderer, camera, clipPlanes, picking,
                 flight, framing, starfield, controls, space, renderLoop (dibuja solo si algo cambia), viewport, disposeScene
   globe/        lo propio de la Tierra: config (radios, caras, texturas), earth, clouds, graticule, lighting,
@@ -85,14 +85,15 @@ src/
                 groups; manifest; columns: catálogo por columnas; assemble: unir y clasificar; freshness: edad de la época), propagation/ (position, orbit, batch, swarm, transport,
                 protocol, propagation.worker),
                 render/ (satellitePoints, swarmPoints, orbitLine), catalog, categories, orbitInfo,
-                createSatellites, config; conjunctions/ [pendiente]
-  ui/           React: App, GlobeCanvas, Search, OwnerFilter, Legend, VirtualList, virtual, SelectedCard, Rulers, ClockPanel,
+                createSatellites, config, regimes (colores por órbita), screening (acercamientos)
+  ui/           React: App, GlobeCanvas, Search, OwnerFilter, ColorMode, Approaches, Hint, filters, datetime, Legend, VirtualList, virtual, SelectedCard, Rulers, ClockPanel,
                 reliability, hooks, format, icons
   shared/       units, frames (TEME ↔ escena), sun (dirección del Sol), store (puente motor → React)
 scripts/        build-textures.sh, update-data.ts (`npm run data`), cachedFetch.ts (caché local de 2 h), restoreData.ts y
                 restore-data.ts (`npm run data:restore`), ci-data.sh, bench.ts (`npm run bench`)
 public/         data/ (generado por `npm run data`, no se versiona), textures/earth/ (KTX2)
 tests/          espeja src/; datos reales de CelesTrak en tests/fixtures
+e2e/            pruebas de humo y de accesibilidad con Playwright (`npm run e2e`)
 docs/           DECISIONES, DATOS, RENDIMIENTO, CONVENCIONES
 .github/workflows/  despliegue y refresco de datos cada 2 h
 ```

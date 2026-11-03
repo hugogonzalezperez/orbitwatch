@@ -12,11 +12,13 @@ Para quien lo abre desde un portfolio y quiere entender en pocos segundos qué e
 
 ## Qué hace
 
-- **Un globo con ~19 500 objetos** reales en 13 categorías por función (estaciones y naves, meteorología, navegación, Starlink, otras constelaciones, observación de la Tierra, ciencia, militares, geoestacionarios, radioaficionados, CubeSats, otros activos y restos de colisiones, estos ocultos al principio), con datos orbitales de [CelesTrak](https://celestrak.org/) propagados con SGP4.
+- **Un globo con ~19 600 objetos** reales en 13 categorías por función (estaciones y naves, meteorología, navegación, Starlink, otras constelaciones, observación de la Tierra, ciencia, militares, comunicaciones, radioaficionados, CubeSats, otros activos y restos de colisiones, estos ocultos al principio), con datos orbitales de [CelesTrak](https://celestrak.org/) propagados con SGP4.
 - **Tiempo simulado:** adelante, atrás, pausa y vuelta a la hora de tu equipo. La cámara está fija y es la Tierra la que gira, con la luz del Sol real a la hora mostrada (terminador, brillo del mar, sombra de la Tierra sobre el satélite elegido), atmósfera y estrellas.
 - **Elegir un satélite** pulsándolo en el globo, desde la lista de su categoría o buscándolo por nombre o número NORAD. La cámara vuela hasta él, se aleja lo necesario para ver su órbita entera y se dibuja la vuelta actual (continua lo recorrido, discontinua lo que falta).
 - **Una ficha** con qué es y en qué órbita está, sobre qué punto de la Tierra, su altitud y velocidad (con una regla que la sitúa entre la superficie, la ISS, el GPS y la órbita geoestacionaria), cuánto tarda en dar una vuelta, perigeo, apogeo, inclinación y **cuánto fiarse de los datos** (edad de la descarga y distancia a la época de los elementos).
-- **Leyenda y búsqueda** que filtran: cada categoría se puede ocultar en el globo y lo que no coincide con la búsqueda se atenúa.
+- **Leyenda, búsqueda y filtros:** cada categoría se puede ocultar en el globo, lo que no coincide con la búsqueda se atenúa, y un selector limita todo a un país u operador. El globo se puede colorear por función o por tipo de órbita.
+- **Compartir:** la dirección recuerda satélite, país, categorías y modo de color; «Copiar enlace» añade la hora simulada.
+- **Acercamientos ahora:** los pares de objetos a menos de 10 km a la hora mostrada (una instantánea con datos públicos, no una predicción de colisión). La rejilla espacial tarda unos 27 ms con 19 612 objetos frente a unos 8 s comparando todos con todos.
 
 ## Cómo se maneja
 
@@ -28,10 +30,12 @@ Para quien lo abre desde un portfolio y quiere entender en pocos segundos qué e
 | `/` | Enfoca el buscador (flechas y `Enter` para elegir, `Esc` para cerrar o borrar) |
 | Interruptor y flecha de cada categoría | Mostrar u ocultar en el globo / desplegar la lista |
 | Controles del reloj | Retroceder, pausar o reanudar, avanzar, y «Ahora» para volver a la hora del equipo |
+| «Ir a…» del reloj | Salta a una fecha y hora UTC |
+| «Seguir» de la ficha | La cámara acompaña al satélite en su órbita |
 | `?t=2026-03-20T14:46:00Z` en la URL | Arranca el reloj en esa hora, en pausa |
 | `?perf` en la URL | Muestra métricas de rendimiento abajo a la derecha (dibujos por segundo, CPU, llamadas de dibujo, Worker) |
 
-La interfaz está pensada para escritorio; en pantallas estrechas aún no se adapta.
+En pantallas estrechas (hasta 48 rem) el buscador queda arriba con los filtros plegables y la ficha pasa a una hoja inferior.
 
 ## Puesta en marcha
 
@@ -43,7 +47,7 @@ npm run data       # descarga los datos de CelesTrak a public/data/ (una vez cad
 npm run dev        # servidor de desarrollo (http://localhost:5173)
 ```
 
-Otros comandos: `npm test` (Vitest), `npm run typecheck`, `npm run build` (typecheck y build de producción en `dist/`), `npm run bench` (mide el cálculo del enjambre y la selección; ver [RENDIMIENTO.md](docs/RENDIMIENTO.md)).
+Otros comandos: `npm run e2e` (pruebas de humo y de accesibilidad con Playwright y el Chrome del sistema, contra el build; necesita los datos), `npm test` (Vitest), `npm run typecheck`, `npm run build` (typecheck y build de producción en `dist/`), `npm run bench` (mide el cálculo del enjambre y la selección; ver [RENDIMIENTO.md](docs/RENDIMIENTO.md)).
 
 **Importante:** los datos no se versionan. Descargar los 40 grupos y el SATCAT tarda unos 53 s; si ya los bajaste hace poco (100 min para `active`, 22 h para el resto), el script usa la caché y no vuelve a pedir nada.
 
@@ -80,7 +84,7 @@ Resumen; el detalle y los motivos, en la documentación.
 
 ## Pendiente
 
-Activar el despliegue automático (preparado en `.github/workflows/deploy.yml`), cribado de acercamientos entre objetos con su benchmark, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
+Un vídeo corto para el README, medir con `?perf` en una GPU real, mapa de noche y relieve, y el dominio propio. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
 
 ## Licencia y créditos
 

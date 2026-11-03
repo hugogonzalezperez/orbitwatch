@@ -5,3 +5,5 @@ dist
 # Datos de CelesTrak: se descargan con `npm run data`; la caché evita repetir una descarga reciente
 public/data/
 .cache/
+test-results/
+playwright-report/
