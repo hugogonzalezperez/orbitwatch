@@ -198,6 +198,21 @@ describe('createSwarm: posiciones en cualquier instante', () => {
   })
 })
 
+describe('createSwarm: colorear por órbita', () => {
+  it('con el modo «regime» cada hueco toma el color de su órbita y conserva la opacidad de su categoría', () => {
+    const regimeRgb = [RED, BLUE] as const
+    const swarm = build([{ id: 'a', records: records.slice(0, 3), rgb: [0, 1, 0], opacity: 0.5 }], { regimes: Uint8Array.from([0, 1, 0]), regimeRgb })
+    const v0 = swarm.colorsVersion()
+    swarm.setColorBy('regime')
+    expect([...swarm.colors.slice(0, 4)]).toEqual([...RED, 0.5])
+    expect([...swarm.colors.slice(4, 8)]).toEqual([...BLUE, 0.5])
+    expect(swarm.colorsVersion()).toBeGreaterThan(v0)
+    swarm.setColorBy('category')
+    expect([...swarm.colors.slice(0, 3)]).toEqual([0, 1, 0])
+    swarm.dispose()
+  })
+})
+
 describe('createSwarm: color y opacidad por hueco', () => {
   const alphas = (swarm: Awaited<ReturnType<typeof ready>>) => Array.from({ length: swarm.size }, (_, i) => swarm.colors[i * 4 + 3]!)
 

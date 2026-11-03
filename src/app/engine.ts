@@ -1,7 +1,8 @@
-import { MathUtils } from 'three'
+import { MathUtils, Quaternion, Vector3 } from 'three'
 import { createGlobe } from '../globe/createGlobe'
 import { createSatellites, ISS_ID, type DataStatus, type SatelliteId, type SelectedInfo } from '../satellites/createSatellites'
 import { FOCUS_TILT_DEG } from '../satellites/config'
+import type { ColorMode } from '../satellites/regimes'
 import { createCamera } from '../scene/camera'
 import { createControls } from '../scene/controls'
 import { disposeScene } from '../scene/disposeScene'
@@ -29,10 +30,15 @@ export interface Engine {
   select(id: SatelliteId | null, options?: { center?: boolean }): void
   /** La cámara vuela sobre el seleccionado y se aleja lo necesario para ver su órbita entera. */
   focusSelected(): void
+  /** La cámara acompaña al seleccionado en su órbita; elegir otro satélite lo apaga. */
+  following: Store<boolean>
+  setFollowing(on: boolean): void
   /** Los satélites de estas categorías no se dibujan en el globo. */
   setHiddenCategories(ids: ReadonlySet<string>): void
   /** Atenúa en el globo los que no están en `ids`; `null` los muestra todos. */
   setHighlight(ids: ReadonlySet<number> | null): void
+  /** Colorea el globo por categoría o por tipo de órbita. */
+  setColorMode(mode: ColorMode): void
   dispose(): void
 }
 
@@ -41,14 +47,20 @@ const FLIGHT_MS = 700
 const LABEL_LEFT_FROM = 0.6 // fracción del ancho a partir de la cual la etiqueta del seleccionado pasa a su izquierda
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** Monta el globo en `container`. Con `startTime` el reloj arranca en esa hora y en pausa; con `perf`, muestra métricas de rendimiento. */
-export function createEngine(container: HTMLElement, { startTime, perf = false }: { startTime?: Date; perf?: boolean } = {}): Engine {
+/** Monta el globo en `container`. Con `startTime` el reloj arranca en esa hora y en pausa; con `satellite`, esa es la primera vista (la ISS si no existe); con `perf`, muestra métricas. */
+export function createEngine(
+  container: HTMLElement,
+  { startTime, satellite, perf = false }: { startTime?: Date; satellite?: SatelliteId; perf?: boolean } = {},
+): Engine {
   const renderer = createRenderer()
   const scene = createSpace(renderer.getPixelRatio())
   const camera = createCamera()
   const controls = createControls(camera, renderer.domElement)
   const clock = createClock({ start: startTime, paused: startTime !== undefined })
   const selection = createStore<SatelliteId | null>(null)
+  const following = createStore(false)
+  const lastDirection = new Vector3() // hacia dónde estaba el seguido en la actualización anterior
+  let hasLastDirection = false
 
   let userMoved = false
   let flight: ReturnType<typeof createFlight> | null = null
@@ -92,6 +104,7 @@ export function createEngine(container: HTMLElement, { startTime, perf = false }
     const date = clock.time()
     globe.update(date)
     satellites.update(date)
+    followSelected()
     showHover()
     labelDirty = true
     flushLabel()
@@ -105,7 +118,7 @@ export function createEngine(container: HTMLElement, { startTime, perf = false }
     onSwarm: requestUpdate, // llegó una muestra nueva: hay que volver a calcular lo que depende de ella
     onChange: () => {
       requestUpdate()
-      if (!userMoved) select(ISS_ID, { center: true, animate: false }) // si aún no has tocado nada, la primera vista es la ISS
+      if (!userMoved) select(satellite !== undefined && satellites.nameOf(satellite) !== null ? satellite : ISS_ID, { center: true, animate: false }) // si aún no has tocado nada, la primera vista
     },
   })
   scene.add(globe.object, satellites.object)
@@ -149,6 +162,22 @@ export function createEngine(container: HTMLElement, { startTime, perf = false }
     labels.placeSelected(inside ? screen : null, screen.x > width * LABEL_LEFT_FROM) // cerca del borde derecho, donde está la ficha, el nombre va a la izquierda
   }
 
+  /** Con «seguir», la cámara gira con el satélite lo mismo que él se ha movido alrededor de la Tierra. */
+  const followSelected = () => {
+    const position = following.get() ? satellites.selectedPosition() : null
+    if (!position) {
+      hasLastDirection = false
+      return
+    }
+    const direction = position.normalize()
+    if (hasLastDirection) {
+      camera.position.applyQuaternion(new Quaternion().setFromUnitVectors(lastDirection, direction))
+      controls.update()
+    }
+    lastDirection.copy(direction)
+    hasLastDirection = true
+  }
+
   const focusSelected = (animate = true) => {
     satellites.update(clock.time()) // posición al día aunque el reloj esté en pausa
     const position = satellites.selectedPosition()
@@ -172,6 +201,7 @@ export function createEngine(container: HTMLElement, { startTime, perf = false }
 
   const select = (id: SatelliteId | null, { center = false, animate = true }: { center?: boolean; animate?: boolean } = {}) => {
     selection.set(id)
+    following.set(false)
     if (center) focusSelected(animate)
   }
 
@@ -187,7 +217,7 @@ export function createEngine(container: HTMLElement, { startTime, perf = false }
     const start = pressedAt
     pressedAt = null
     if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > CLICK_MOVE_TOLERANCE_PX) return
-    selection.set(satelliteAt(event.clientX, event.clientY))
+    select(satelliteAt(event.clientX, event.clientY))
   }
   // Lo que hay bajo el puntero se vuelve a comprobar en cada actualización: el satélite se mueve aunque el ratón esté quieto.
   let pointer: { clientX: number; clientY: number } | null = null
@@ -219,8 +249,17 @@ export function createEngine(container: HTMLElement, { startTime, perf = false }
     selection,
     select,
     focusSelected: () => focusSelected(),
+    following,
+    setFollowing(on) {
+      following.set(on)
+      requestUpdate()
+    },
     setHiddenCategories(ids) {
       satellites.setHiddenCategories(ids)
+      requestUpdate()
+    },
+    setColorMode(mode) {
+      satellites.setColorMode(mode)
       requestUpdate()
     },
     setHighlight(ids) {

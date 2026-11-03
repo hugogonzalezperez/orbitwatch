@@ -3,7 +3,8 @@ import { pickNearest } from '../scene/picking'
 import { createStore, type Store } from '../shared/store'
 import { kmToUnits } from '../shared/units'
 import { buildCatalog, type CatalogEntry } from './catalog'
-import { describeOrbit, EARTH_EQUATORIAL_KM, type OrbitDescription } from './orbitInfo'
+import { describeOrbit, EARTH_EQUATORIAL_KM, regimeOf, type OrbitDescription } from './orbitInfo'
+import { REGIMES, type ColorMode } from './regimes'
 import { getCategory } from './categories'
 import { ORBIT_POINTS, SATELLITE_COLOR, SATELLITE_SIZE_PX, SELECTION_COLOR, SWARM_HIT_RADIUS_PX, SWARM_SIZE_PX } from './config'
 import { sha256Hex } from '../shared/hash'
@@ -86,6 +87,8 @@ interface Satellites {
   nameOf(id: SatelliteId): string | null
   /** Los grupos de `ids` (categorías) no se dibujan en el globo. */
   setHiddenCategories(ids: ReadonlySet<string>): void
+  /** Colorea el enjambre por categoría o por tipo de órbita. */
+  setColorMode(mode: ColorMode): void
   /** Radio de la órbita del seleccionado en su punto más alto, en radios terrestres desde el centro, o `null`. */
   selectedOrbitRadius(): number | null
   /** Posición del seleccionado en la escena (radios terrestres), o `null`. */
@@ -132,6 +135,10 @@ export function createSatellites(
   const data = createStore<DataStatus>({ kind: 'loading' })
   const selected = createStore<SelectedInfo | null>(null)
 
+  // Lo que se pide antes de que cargue el enjambre (por ejemplo, filtros que vienen en la dirección) se aplica al crearlo.
+  let hiddenIds: ReadonlySet<string> = new Set()
+  let highlightIds: ReadonlySet<number> | null = null
+  let colorMode: ColorMode = 'category'
   let swarm: Swarm | undefined
   let swarmPoints: ReturnType<typeof createSwarmPoints> | undefined
   let pickPositions = new Float32Array(0)
@@ -188,12 +195,18 @@ export function createSatellites(
         const { color, opacity } = getCategory(id)
         return { id, rgb: toRgb(color), opacity }
       })
+      const regimeIndex = new Map(REGIMES.map((regime, k) => [regime.id, k]))
       const created = createSwarm(loaded, styles, {
+        regimes: Uint8Array.from(loaded.meanMotion, (n, i) => regimeIndex.get(regimeOf(n, loaded.eccentricity[i]!))!),
+        regimeRgb: REGIMES.map((regime) => toRgb(regime.color)),
         onSample: () => {
           swarmPoints?.setSample(created.sample()!)
           onSwarm?.()
         },
       })
+      created.setHidden(hiddenIds)
+      created.setHighlight(highlightIds)
+      created.setColorBy(colorMode)
       swarm = created
       swarmPoints = createSwarmPoints(renderer, created.size, SWARM_SIZE_PX)
       pickPositions = new Float32Array(created.size * 3)
@@ -236,7 +249,10 @@ export function createSatellites(
         selected.set(null)
       }
     },
-    setHighlight: (ids) => swarm?.setHighlight(ids),
+    setHighlight(ids) {
+      highlightIds = ids
+      swarm?.setHighlight(ids)
+    },
     swarmStats() {
       const sample = swarm?.sample()
       return swarm && sample
@@ -244,7 +260,14 @@ export function createSatellites(
         : null
     },
     nameOf: (id) => names.get(id) ?? null,
-    setHiddenCategories: (ids) => swarm?.setHidden(ids),
+    setHiddenCategories(ids) {
+      hiddenIds = ids
+      swarm?.setHidden(ids)
+    },
+    setColorMode(mode) {
+      colorMode = mode
+      swarm?.setColorBy(mode)
+    },
     selectedOrbitRadius: () => (tracked ? kmToUnits(describeOrbit(tracked.record).apogeeKm + EARTH_EQUATORIAL_KM) : null),
     pick(camera, width, height, x, y) {
       if (!swarm) return null

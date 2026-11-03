@@ -203,6 +203,25 @@ describe('createSatellites: elegir bajo el puntero', () => {
     satellites.dispose()
   })
 
+  it('lo que se pide antes de que cargue el enjambre (categorías ocultas) se aplica al crearlo', async () => {
+    let arrived: () => void = () => {}
+    const sample = new Promise<void>((resolve) => (arrived = resolve))
+    serve(FILES)
+    const satellites = createSatellites(renderer, { onChange: () => {}, onSwarm: () => arrived() })
+    satellites.setHiddenCategories(new Set(['stations', 'weather'])) // aún no hay enjambre
+    await vi.waitFor(() => expect(satellites.data.get().kind).toBe('ready'))
+    satellites.update(oneHourAfterEpoch)
+    await sample
+    satellites.select(ISS_ID)
+    satellites.update(oneHourAfterEpoch)
+    const camera = new PerspectiveCamera(45, 1, 0.1, 100)
+    camera.position.copy(satellites.selectedPosition()!.multiplyScalar(4))
+    camera.lookAt(0, 0, 0)
+    camera.updateMatrixWorld()
+    expect(satellites.pick(camera, 800, 800, 400, 400)).toBeNull()
+    satellites.dispose()
+  })
+
   it('el estado del cálculo cuenta los satélites del enjambre y cuántos calculó SGP4', async () => {
     const { satellites } = await lookingAtIss()
     expect(satellites.swarmStats()).toMatchObject({ size: 20, valid: 20 })

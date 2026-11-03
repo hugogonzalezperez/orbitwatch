@@ -64,6 +64,13 @@ describe('classify: por nombre, solo cuando los grupos no dicen nada', () => {
     expect(of(['active'], name)).toBe(category)
   })
 
+  it('en `satnogs` y no en `amateur`, el nombre decide si lo reconoce, y si no se queda como radioaficionado', () => {
+    expect(of(['satnogs'], 'NOAA 19')).toBe('weather')
+    expect(of(['satnogs'], 'METEOR-M 2')).toBe('weather')
+    expect(of(['satnogs'], 'ALGO RARO 5')).toBe('amateur')
+    expect(of(['satnogs', 'amateur'], 'NOAA 19')).toBe('amateur')
+  })
+
   it('un nombre nunca anula lo que dicen los grupos', () => {
     expect(of(['weather'], 'NAVSTAR 1')).toBe('weather')
     expect(of(['active', 'military'], 'STARLINK-1')).toBe('military')

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALTITUDE_MARKS, altitudeRulerPosition, describeOrbit } from '../../src/satellites/orbitInfo'
+import { ALTITUDE_MARKS, altitudeRulerPosition, describeOrbit, regimeOf } from '../../src/satellites/orbitInfo'
 import { issRecord } from '../helpers/fixtures'
 
 const iss = issRecord()
@@ -65,5 +65,14 @@ describe('altitudeRulerPosition', () => {
     const positions = ALTITUDE_MARKS.map((m) => altitudeRulerPosition(m.km))
     expect([...positions].sort((a, b) => a - b)).toEqual(positions)
     expect(ALTITUDE_MARKS.every((m) => m.label.length > 0)).toBe(true)
+  })
+})
+
+describe('regimeOf', () => {
+  it('da el mismo régimen que describeOrbit sin necesitar un registro', () => {
+    for (const patch of [{}, { MEAN_MOTION: 1.0027, ECCENTRICITY: 0.0002 }, { MEAN_MOTION: 2.0056, ECCENTRICITY: 0.001 }, { MEAN_MOTION: 2.0, ECCENTRICITY: 0.7 }, { MEAN_MOTION: 0.5, ECCENTRICITY: 0.01 }]) {
+      const r = record(patch)
+      expect(regimeOf(Number(r.MEAN_MOTION), Number(r.ECCENTRICITY))).toBe(describeOrbit(r).regime)
+    }
   })
 })

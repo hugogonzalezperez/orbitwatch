@@ -3,8 +3,8 @@ import type { CatalogEntry } from '../satellites/catalog'
 import { visibleRange } from './virtual'
 
 /** Alto de cada fila en píxeles; el CSS usa el mismo valor (`.vlist-row`). */
-const ROW_HEIGHT = 40
-const MAX_HEIGHT = 288
+const ROW_HEIGHT = 44
+const MAX_HEIGHT = 308
 const OVERSCAN_ROWS = 6
 
 interface Props {

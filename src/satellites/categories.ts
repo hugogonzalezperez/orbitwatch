@@ -67,6 +67,7 @@ export const NAME_RULES: ReadonlyArray<{ pattern: RegExp; category: string }> = 
   { pattern: /^(TIANQI|GEESAT|KINEIS|GONETS|RASSVET|HULIANWANG|CONNECTA|SPACEMOBILE|BLUEBIRD)\b/, category: 'constellations' }, // constelaciones de comunicaciones e IoT sin grupo propio
   { pattern: /^(GAOFEN|YUNHAI|PIESAT|TIANHUI|SUPERVIEW|GHGSAT|NUSAT|GRUS|LEMUR|HAWK|BRO|SITRO)\b/, category: 'earth-observation' }, // observación, incluida la de señales de radio y barcos
   { pattern: /^TOMORROW\b/, category: 'weather' }, // sondeo atmosférico comercial
+  { pattern: /^(NOAA|METEOR|FENGYUN|FY-\d|GOES|METOP|METEOSAT|HIMAWARI|DMSP|TIROS|ELEKTRO|INSAT|MTSAT)\b/, category: 'weather' }, // series meteorológicas que SatNOGS sigue por sus transmisores
   { pattern: /^(SDA_|PRAETORIAN)/, category: 'military' }, // capas de la Agencia de Desarrollo Espacial de EE. UU.
   { pattern: /^(SHIYAN|SHIJIAN|CHUANGXIN)\b/, category: 'science' }, // series chinas de experimentación
 ]

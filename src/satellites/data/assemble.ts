@@ -17,13 +17,15 @@ export interface ClassifiedRecord {
 
 /**
  * La categoría de un objeto. Un resto o un cuerpo de cohete (tipo del SATCAT) va a «restos» esté en el grupo que esté; si no,
- * manda el primer grupo de la lista de categorías, y solo si es «otros» se mira el nombre.
+ * manda el primer grupo de la lista de categorías. El nombre solo se mira si es «otros» o si el objeto está en `satnogs` y no
+ * en `amateur` (SatNOGS sigue también satélites meteorológicos y de otras funciones).
  */
 export function classify({ groups, name, type }: { groups: readonly string[]; name: string; type: ObjectType }): string {
   if (type === 'DEB' || type === 'R/B') return 'debris'
   const byGroup = CATEGORIES.find((c) => c.groups.some((g) => groups.includes(g)))?.id ?? 'other'
-  if (byGroup !== 'other') return byGroup
-  return NAME_RULES.find((rule) => rule.pattern.test(name))?.category ?? 'other'
+  const onlySatnogs = byGroup === 'amateur' && !groups.includes('amateur')
+  if (byGroup !== 'other' && !onlySatnogs) return byGroup
+  return NAME_RULES.find((rule) => rule.pattern.test(name))?.category ?? byGroup
 }
 
 /** Un registro por número de catálogo (el de época más reciente), con su categoría y el SATCAT, ordenado por número: los mismos datos dan el mismo fichero. */

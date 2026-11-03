@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createEngine, type Engine } from '../app/engine'
 import { isPerfEnabled } from '../app/perf'
-import { parseStartTime } from '../app/startTime'
+import { readShareState } from '../app/urlState'
+import { DEFAULT_HIDDEN } from './filters'
 
 const WEBGL_ERROR =
   'No se pudo iniciar WebGL, así que el globo 3D no se puede mostrar. Activa la aceleración por hardware del navegador o prueba con otro.'
@@ -13,7 +14,8 @@ export function GlobeCanvas({ onEngine }: { onEngine: (engine: Engine | null) =>
   useEffect(() => {
     let engine: Engine
     try {
-      engine = createEngine(ref.current!, { startTime: parseStartTime(window.location.search), perf: isPerfEnabled(window.location.search) })
+      const shared = readShareState(window.location.search, DEFAULT_HIDDEN)
+      engine = createEngine(ref.current!, { startTime: shared.time ?? undefined, satellite: shared.sat ?? undefined, perf: isPerfEnabled(window.location.search) })
     } catch (error) {
       console.error(error)
       setFailed(true) // normalmente: el navegador no puede crear un contexto WebGL

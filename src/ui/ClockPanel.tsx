@@ -1,4 +1,6 @@
+import { useId, useState, type FormEvent } from 'react'
 import { stepSpeed, type Clock } from '../app/clock'
+import { parseUtcInput, toUtcInput } from './datetime'
 import { formatSpeed } from './format'
 import { useClockState, useClockTime } from './hooks'
 import { ForwardIcon, PauseIcon, PlayIcon, RewindIcon } from './icons'
@@ -25,10 +27,22 @@ const UTC = new Intl.DateTimeFormat('es-ES', {
 export function ClockPanel({ clock }: { clock: Clock }) {
   const state = useClockState(clock)
   const time = useClockTime(clock)
+  const [jumping, setJumping] = useState(false)
+  const [invalid, setInvalid] = useState(false)
+  const inputId = useId()
   const mode = state.paused ? 'En pausa' : state.live ? 'En directo' : `Simulación ${formatSpeed(state.speed)}`
   const go = (direction: 1 | -1) => {
     clock.setSpeed(stepSpeed(state.speed, direction))
     clock.resume()
+  }
+
+  const jump = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const date = parseUtcInput(String(new FormData(event.currentTarget).get('when')))
+    setInvalid(date === null)
+    if (!date) return
+    clock.jumpTo(date)
+    setJumping(false)
   }
 
   return (
@@ -60,7 +74,19 @@ export function ClockPanel({ clock }: { clock: Clock }) {
         <button type="button" className="outline" onClick={() => clock.resetToNow()} disabled={state.live}>
           Ahora
         </button>
+        <button type="button" className="outline" aria-expanded={jumping} aria-controls={inputId} onClick={() => setJumping(!jumping)}>
+          Ir a…
+        </button>
       </div>
+      {jumping && (
+        <form className="clock-jump" onSubmit={jump} onKeyDown={(event) => event.key === 'Escape' && (event.stopPropagation(), setJumping(false))}>
+          <label htmlFor={inputId}>Fecha y hora (UTC)</label>
+          <input id={inputId} name="when" type="datetime-local" defaultValue={toUtcInput(time)} required autoFocus aria-invalid={invalid} />
+          <button type="submit" className="primary">
+            Ir
+          </button>
+        </form>
+      )}
     </section>
   )
 }

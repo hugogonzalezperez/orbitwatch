@@ -1,5 +1,6 @@
 import type { CatalogColumns, OrbitInput } from '../data/columns'
 import { toOrbitInput } from '../data/columns'
+import type { ColorMode } from '../regimes'
 import type { Sample } from './batch'
 import { createTransport as createDefaultTransport, type PropagationTransport } from './transport'
 
@@ -55,6 +56,8 @@ export interface Swarm {
   setHighlight(ids: ReadonlySet<number> | null): void
   /** Las categorías de `ids` no se dibujan. */
   setHidden(ids: ReadonlySet<string>): void
+  /** Color por categoría o por tipo de órbita; la opacidad sigue siendo la de la categoría. */
+  setColorBy(mode: ColorMode): void
   dispose(): void
 }
 
@@ -63,16 +66,20 @@ interface Options {
   createTransport?: (input: OrbitInput) => PropagationTransport
   /** Se llama cuando llega una muestra nueva. */
   onSample?: () => void
+  /** Tipo de órbita de cada hueco (posición en `regimeRgb`) y color de cada tipo, para colorear por órbita. */
+  regimes?: Uint8Array
+  regimeRgb?: ReadonlyArray<readonly [number, number, number]>
 }
 
 /** Muchos satélites sin estado propio: el cálculo va en un Worker y entre muestras se extrapola con la velocidad. */
-export function createSwarm(columns: CatalogColumns, styles: SwarmStyle[], { createTransport = createDefaultTransport, onSample }: Options = {}): Swarm {
+export function createSwarm(columns: CatalogColumns, styles: SwarmStyle[], { createTransport = createDefaultTransport, onSample, regimes, regimeRgb }: Options = {}): Swarm {
   const size = columns.id.length
   const ids = Uint32Array.from(columns.id)
   const colors = new Float32Array(size * 4)
   const visible = new Uint8Array(size)
   let hidden: ReadonlySet<string> = new Set()
   let highlight: ReadonlySet<number> | null = null
+  let colorBy: ColorMode = 'category'
   let version = 0
 
   const recolor = () => {
@@ -81,7 +88,7 @@ export function createSwarm(columns: CatalogColumns, styles: SwarmStyle[], { cre
       const { id, rgb, opacity } = styles[columns.category[i]!]!
       const shown = !hidden.has(id)
       visible[i] = shown ? 1 : 0
-      colors.set(rgb, i * 4)
+      colors.set(colorBy === 'regime' && regimes && regimeRgb ? regimeRgb[regimes[i]!]! : rgb, i * 4)
       colors[i * 4 + 3] = !shown ? 0 : highlight === null ? opacity : highlight.has(ids[i]!) ? (emphasize ? EMPHASIZED : opacity) : DIMMED_OPACITY
     }
     version++
@@ -140,6 +147,10 @@ export function createSwarm(columns: CatalogColumns, styles: SwarmStyle[], { cre
     },
     setHidden(next) {
       hidden = next
+      recolor()
+    },
+    setColorBy(mode) {
+      colorBy = mode
       recolor()
     },
     dispose() {

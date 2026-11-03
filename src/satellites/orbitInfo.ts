@@ -20,10 +20,8 @@ export interface OrbitDescription {
   regime: Regime
 }
 
-/** Periodo, altitudes y tipo de órbita a partir de los elementos orbitales. */
-export function describeOrbit(record: OmmRecord): OrbitDescription {
-  const meanMotion = Number(record.MEAN_MOTION)
-  const eccentricity = Number(record.ECCENTRICITY)
+/** Periodo, altitudes y tipo de órbita a partir del movimiento medio (vueltas por día) y la excentricidad. */
+function shape(meanMotion: number, eccentricity: number) {
   const periodMinutes = 1440 / meanMotion
   const meanMotionRadS = (meanMotion * 2 * Math.PI) / 86_400
   const semiMajorKm = (MU_KM3_S2 / meanMotionRadS ** 2) ** (1 / 3)
@@ -36,8 +34,17 @@ export function describeOrbit(record: OmmRecord): OrbitDescription {
   else if (meanKm < LOW_ORBIT_LIMIT_KM) regime = 'low'
   else if (meanKm < GEOSTATIONARY_KM) regime = 'medium'
   else regime = 'high'
-  return { periodMinutes, perigeeKm, apogeeKm, inclinationDeg: Number(record.INCLINATION), eccentricity, regime }
+  return { periodMinutes, perigeeKm, apogeeKm, regime }
 }
+
+/** Periodo, altitudes y tipo de órbita a partir de los elementos orbitales. */
+export function describeOrbit(record: OmmRecord): OrbitDescription {
+  const eccentricity = Number(record.ECCENTRICITY)
+  return { ...shape(Number(record.MEAN_MOTION), eccentricity), inclinationDeg: Number(record.INCLINATION), eccentricity }
+}
+
+/** Solo el tipo de órbita, para clasificar miles de satélites sin construir sus registros. */
+export const regimeOf = (meanMotion: number, eccentricity: number): Regime => shape(meanMotion, eccentricity).regime
 
 const RULER_MAX_KM = 40_000
 

@@ -1,11 +1,13 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import type { Clock } from '../app/clock'
+import { readShareState, writeShareState } from '../app/urlState'
 import { getCategory } from '../satellites/categories'
 import { describeOwner, describeStatus, describeType } from '../satellites/origin'
 import type { SelectedInfo } from '../satellites/createSatellites'
 import { orbitProgress } from '../satellites/propagation/orbit'
 import type { Store } from '../shared/store'
 import { NBSP, describeRegime, describeSunlight, formatDecimal, formatInteger, formatLatitude, formatLongitude, formatLaunch, formatSpan } from './format'
+import { DEFAULT_HIDDEN } from './filters'
 import { useClockTime, useNow, useStore } from './hooks'
 import { CloseIcon } from './icons'
 import { describeReliability } from './reliability'
@@ -24,17 +26,34 @@ const UTC_DATE = new Intl.DateTimeFormat('es-ES', {
 interface Props {
   selected: Store<SelectedInfo | null>
   clock: Clock
+  following: Store<boolean>
+  onFollow: (on: boolean) => void
   onClose: () => void
   onCenter: () => void
 }
 
 /** Ficha del satélite seleccionado: qué es, dónde está ahora, cómo es su órbita y cuánto fiarse de los datos. */
-export function SelectedCard({ selected, clock, onClose, onCenter }: Props) {
+export function SelectedCard({ selected, clock, following, onFollow, onClose, onCenter }: Props) {
   const info = useStore(selected)
+  const isFollowing = useStore(following)
   const simTime = useClockTime(clock)
   const now = useNow()
   const headingId = useId()
+  const [copied, setCopied] = useState<'ok' | 'failed' | null>(null)
   if (!info) return null
+
+  // El enlace lleva lo que se ve y, si el reloj no marca la hora real, también la hora simulada.
+  const copyLink = async () => {
+    const shared = readShareState(window.location.search, DEFAULT_HIDDEN)
+    const search = writeShareState(window.location.search, { ...shared, sat: info.id, time: clock.state().live ? null : clock.time() }, DEFAULT_HIDDEN)
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}${search}`)
+      setCopied('ok')
+    } catch {
+      setCopied('failed') // sin permiso del navegador o sin https
+    }
+    setTimeout(() => setCopied(null), 2500)
+  }
 
   const { state, shape, orbit } = info
   const reliability = describeReliability({ epoch: info.epoch, downloadedAt: info.downloadedAt, simTime, now })
@@ -157,9 +176,21 @@ export function SelectedCard({ selected, clock, onClose, onCenter }: Props) {
         <p className="ids num">
           NORAD {info.id} · {info.designator}
         </p>
-        <button type="button" className="primary" onClick={onCenter}>
-          Centrar en pantalla
-        </button>
+        <div className="card-actions">
+          <button type="button" className="primary" onClick={onCenter}>
+            Centrar en pantalla
+          </button>
+          <button type="button" className="outline" aria-pressed={isFollowing} onClick={() => onFollow(!isFollowing)} title="La cámara acompaña al satélite en su órbita">
+            Seguir
+          </button>
+          <button type="button" className="outline card-copy" onClick={copyLink}>
+            Copiar enlace
+          </button>
+        </div>
+        <p className="sr-only" role="status">
+          {copied === 'ok' ? 'Enlace copiado' : copied === 'failed' ? 'No se pudo copiar el enlace' : ''}
+        </p>
+        {copied && <p className={copied === 'ok' ? 'card-copied' : 'card-copied note-stale'} aria-hidden="true">{copied === 'ok' ? 'Enlace copiado' : 'No se pudo copiar'}</p>}
       </footer>
     </aside>
   )

@@ -1,22 +1,21 @@
-import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react'
+import { useId, useMemo, useState, type CSSProperties } from 'react'
 import type { Engine } from '../app/engine'
 import { filterByOwner, groupByCategory, type CatalogEntry } from '../satellites/catalog'
-import { CATEGORIES, type Category } from '../satellites/categories'
+import type { Category } from '../satellites/categories'
+import type { ColorMode } from '../satellites/regimes'
 import { cssColor, formatInteger } from './format'
 import { useStore } from './hooks'
 import { ChevronRightIcon } from './icons'
 import { VirtualList } from './VirtualList'
 
+const NEUTRAL = '#6b7280'
 
 /** Leyenda del globo: qué son los puntos, cuántos hay de cada tipo, y un interruptor para mostrarlos u ocultarlos. */
-export function Legend({ engine, owner }: { engine: Engine; owner: string }) {
+export function Legend({ engine, owner, hidden, colorMode, onToggle }: { engine: Engine; owner: string; hidden: ReadonlySet<string>; colorMode: ColorMode; onToggle: (categoryId: string) => void }) {
   const data = useStore(engine.data)
   const selectedId = useStore(engine.selection)
   const groups = useMemo(() => (data.kind === 'ready' ? groupByCategory(filterByOwner(data.catalog, owner)) : []), [data, owner])
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(CATEGORIES.filter((c) => c.hiddenByDefault).map((c) => c.id)))
   const [openId, setOpenId] = useState<string | null>(null)
-
-  useEffect(() => engine.setHiddenCategories(hidden), [engine, hidden])
 
   if (data.kind === 'loading') return <p className="rail-note" role="status">Cargando satélites…</p>
   if (data.kind === 'error') {
@@ -27,13 +26,6 @@ export function Legend({ engine, owner }: { engine: Engine; owner: string }) {
     )
   }
 
-  const toggle = (id: string) =>
-    setHidden((current) => {
-      const next = new Set(current)
-      if (!next.delete(id)) next.add(id)
-      return next
-    })
-
   return (
     <ul className="legend" aria-label="Categorías de satélites">
       {groups.map(({ category, entries }) => (
@@ -42,9 +34,10 @@ export function Legend({ engine, owner }: { engine: Engine; owner: string }) {
           category={category}
           entries={entries}
           visible={!hidden.has(category.id)}
+          neutral={colorMode === 'regime'}
           open={openId === category.id}
           selectedId={selectedId}
-          onToggle={() => toggle(category.id)}
+          onToggle={() => onToggle(category.id)}
           onOpen={() => setOpenId(openId === category.id ? null : category.id)}
           onSelect={(id) => engine.select(id, { center: true })}
         />
@@ -57,6 +50,8 @@ interface ItemProps {
   category: Category
   entries: CatalogEntry[]
   visible: boolean
+  /** Al colorear por órbita, el color de la categoría no vale: la muestra se queda gris. */
+  neutral: boolean
   open: boolean
   selectedId: number | null
   onToggle: () => void
@@ -64,13 +59,13 @@ interface ItemProps {
   onSelect: (id: number) => void
 }
 
-function LegendItem({ category, entries, visible, open, selectedId, onToggle, onOpen, onSelect }: ItemProps) {
+function LegendItem({ category, entries, visible, neutral, open, selectedId, onToggle, onOpen, onSelect }: ItemProps) {
   const listId = useId()
   return (
     <li className="legend-item">
       <div className="legend-row">
         <button type="button" className="legend-toggle" aria-pressed={visible} aria-label={`Mostrar ${category.label} en el globo`} onClick={onToggle}>
-          <i className={visible ? 'swatch' : 'swatch swatch-off'} style={{ '--swatch': cssColor(category.color) } as CSSProperties} aria-hidden="true" />
+          <i className={visible ? 'swatch' : 'swatch swatch-off'} style={{ '--swatch': neutral ? NEUTRAL : cssColor(category.color) } as CSSProperties} aria-hidden="true" />
           <span className="legend-label">{category.label}</span>
           <span className="legend-count num">{formatInteger(entries.length)}</span>
         </button>
