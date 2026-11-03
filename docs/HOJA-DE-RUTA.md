@@ -54,10 +54,10 @@ Sacar el cálculo de los satélites del hilo principal y poder medir en cualquie
 - [x] **D2. Formato por columnas** con hash en el nombre (`columns.ts`, manifiesto v3, carga en el navegador con comprobación del hash, Worker con arrays tipados): 2,85 MB y 801 kB comprimido.
 - [x] **D3. Caché local y pausa entre grupos** en el script de datos.
 - [x] **D4. Restos ocultos por defecto** y colores por categoría comprobados (todas las marcas, entre 4,9:1 y 15,1:1 sobre el panel).
-- [ ] **D5. SATCAT:** propietario, tipo y fecha de lanzamiento; separar restos y filtrar por país. Antes hay que comprobar su tamaño y política en CelesTrak.
+- [x] **D5. SATCAT y mejor clasificación:** 40 grupos de CelesTrak y el SATCAT (6,8 MB, una petición); el tipo separa restos y cuerpos de cohete, unas pocas reglas por nombre recogen familias sin grupo («Otros activos» baja de 3 518 a 1 377); la ficha muestra propietario, tipo, lanzamiento y estado, y la columna izquierda filtra por país u operador (leyenda, búsqueda y globo). Caché escalonada (`active` 100 min, el resto 22 h) que la Action conserva entre ejecuciones. Catálogo v4: 19 612 objetos, 3,41 MB (821 kB comprimido).
 - [ ] **D6. Colores por régimen orbital** (opción de coloreado).
 
-**Criterio:** el catálogo ampliado carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo: medido con `?perf` y `npm run bench`. **Cumplido para D1 a D4:** 19 520 objetos; el hilo principal gasta lo mismo que con 11 250 (5,3 a 5,6 % de JavaScript a ×10); los restos parten ocultos. Quedan D5 (SATCAT) y D6 (colores por régimen).
+**Criterio:** el catálogo ampliado carga y se mueve con el cálculo fuera del hilo principal, sin saturar el globo: medido con `?perf` y `npm run bench`. **Cumplido para D1 a D5:** 19 612 objetos (el porcentaje de JavaScript en el navegador, 5,3 a 5,6 % a ×10 frente a 5,5 % con 11 250, se midió con 19 520; el banco de Node sí se repitió con 19 612); los restos parten ocultos. Con D5 el cálculo por actualización no cambia (ver [RENDIMIENTO.md](RENDIMIENTO.md)). Queda D6 (colores por régimen).
 
 ## Fase E: diseño y experiencia de uso
 

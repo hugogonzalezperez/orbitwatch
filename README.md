@@ -45,7 +45,7 @@ npm run dev        # servidor de desarrollo (http://localhost:5173)
 
 Otros comandos: `npm test` (Vitest), `npm run typecheck`, `npm run build` (typecheck y build de producción en `dist/`), `npm run bench` (mide el cálculo del enjambre y la selección; ver [RENDIMIENTO.md](docs/RENDIMIENTO.md)).
 
-**Importante:** los datos no se versionan. Descargar los 20 grupos tarda unos 33 s; si ya los bajaste hace menos de 2 h, el script usa la caché y no vuelve a pedir nada.
+**Importante:** los datos no se versionan. Descargar los 40 grupos y el SATCAT tarda unos 53 s; si ya los bajaste hace poco (100 min para `active`, 22 h para el resto), el script usa la caché y no vuelve a pedir nada.
 
 ## Cómo está hecho
 
@@ -76,11 +76,11 @@ Resumen; el detalle y los motivos, en la documentación.
 - **La precisión es limitada:** con elementos orbitales públicos la posición tiene errores de kilómetros y crece al alejarse de la época; la ficha lo avisa. OrbitWatch es una visualización, no una herramienta operativa.
 - Solo escritorio. Sin medidas de rendimiento en una GPU real todavía.
 - Las nubes son una foto fija, no el tiempo real. Las estrellas son aleatorias, no las de un catálogo.
-- «Estaciones y naves» es el grupo `stations` de CelesTrak e incluye algunos restos y módulos; no hay datos para separarlos.
+- La categoría de un satélite sale de los grupos de CelesTrak, del tipo del SATCAT y de unas pocas reglas por nombre; unos 1 400 satélites activos siguen en «Otros activos» porque ninguna fuente dice qué hacen.
 
 ## Pendiente
 
-SATCAT (país, tipo y fecha de lanzamiento), activar el despliegue automático (preparado en `.github/workflows/deploy.yml`), cribado de acercamientos entre objetos con su benchmark, país y propietario de cada satélite, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
+Activar el despliegue automático (preparado en `.github/workflows/deploy.yml`), cribado de acercamientos entre objetos con su benchmark, colores por régimen orbital, versión móvil, mapa de noche y relieve. La hoja de ruta con fases e hitos está en [docs/HOJA-DE-RUTA.md](docs/HOJA-DE-RUTA.md).
 
 ## Licencia y créditos
 

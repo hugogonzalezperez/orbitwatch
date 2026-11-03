@@ -7,7 +7,7 @@ Cómo encajan las piezas hoy. El porqué de cada decisión, con sus alternativas
 No hay backend. Solo un proceso fuera del navegador habla con CelesTrak; el navegador nunca lo hace.
 
 ```
-CelesTrak ──(20 grupos, 1 petición cada uno, ≤ 1 vez cada 2 h, con caché local)──> npm run data  (y la Action programada)
+CelesTrak ──(40 grupos y el SATCAT, 1 petición cada uno, caché escalonada)──> npm run data  (y la Action programada)
                                                          │ valida (HTTP 200, esquema, nº de objetos)
                                                          │ une, deduplica y clasifica por función
                                                          ▼
@@ -63,7 +63,7 @@ Navegador: manifest → catálogo (comprueba el hash) → columnas → lista del
 
 React solo aloja el canvas y los paneles. El motor 3D es imperativo (`app/engine.ts`) y expone un `Engine` (reloj, estado de los datos y del seleccionado como `Store`, `select`, `focusSelected`, `setHighlight`, `setHiddenCategories`); React se suscribe con `useSyncExternalStore`. Diseño visual en [DESIGN.md](DESIGN.md).
 
-- `ui/App.tsx` (nombre y línea viva), `Search`, `Legend` (categorías con interruptor; listas con `VirtualList`, de ventana virtual: filas de 40 px y solo se pintan las visibles), `SelectedCard` con `Rulers` (reglas de altitud y de vuelta), `ClockPanel`, `reliability` (frase de fiabilidad de los datos).
+- `ui/App.tsx` (nombre y línea viva), `Search`, `OwnerFilter` (país u operador: limita leyenda, búsqueda y globo), `Legend` (categorías con interruptor; listas con `VirtualList`, de ventana virtual: filas de 40 px y solo se pintan las visibles), `SelectedCard` con `Rulers` (reglas de altitud y de vuelta), `ClockPanel`, `reliability` (frase de fiabilidad de los datos).
 - Las etiquetas del seleccionado y de lo que hay bajo el puntero (`app/labels.ts`) son DOM imperativo, no React, porque se recolocan en cada fotograma.
 
 ## Rendimiento
@@ -86,7 +86,7 @@ src/
                 protocol, propagation.worker),
                 render/ (satellitePoints, swarmPoints, orbitLine), catalog, categories, orbitInfo,
                 createSatellites, config; conjunctions/ [pendiente]
-  ui/           React: App, GlobeCanvas, Search, Legend, VirtualList, virtual, SelectedCard, Rulers, ClockPanel,
+  ui/           React: App, GlobeCanvas, Search, OwnerFilter, Legend, VirtualList, virtual, SelectedCard, Rulers, ClockPanel,
                 reliability, hooks, format, icons
   shared/       units, frames (TEME ↔ escena), sun (dirección del Sol), store (puente motor → React)
 scripts/        build-textures.sh, update-data.ts (`npm run data`), cachedFetch.ts (caché local de 2 h), restoreData.ts y

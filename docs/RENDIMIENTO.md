@@ -34,6 +34,8 @@ Node 22 con `tsx` y el catálogo real (19 520 objetos). Cifras de tres ejecucion
 | Extrapolar todas las posiciones a la hora actual | 0,26 ms |
 | Elegir el satélite bajo el puntero (`pickNearest`) | 0,11 ms de mediana (p95: 0,2 a 0,25 ms) |
 
+**Con el SATCAT (19 612 objetos, catálogo de 3,41 MB, una ejecución del 2026-11-03):** `JSON.parse` 17 ms, comprobar la forma 7 ms, construir el catálogo 43 ms, arrays para el Worker 4 ms, `json2satrec` 188 ms, `propagateBatch` 14,5 ms de mediana (la primera, 92 ms), extrapolar 0,26 ms, elegir 0,115 ms. Las columnas nuevas (propietario, tipo, estado, fecha) no cambian lo que cuesta calcular. No se han vuelto a medir en el navegador (porcentaje de JavaScript, memoria) tras añadirlas.
+
 Antes de la fase de datos (11 250 objetos): arranque en el hilo principal ≈ 67 ms más 120 ms de `json2satrec` que ya estaban en el Worker; `propagateBatch` 8,1 ms; extrapolar 0,08 ms; elegir 0,066 ms.
 
 Antes de la fase B, recalcular el enjambre en el hilo principal costaba de 10 a 14 ms por actualización (mediana de 9,5 a 10 ms en cuatro ejecuciones; 13,9 ms en la primera, con el navegador y el servidor abiertos).
@@ -58,7 +60,7 @@ Con el reloj en pausa, 0 dibujos en 3 s (render a demanda).
 | Paquete de JavaScript | **910 kB** (259 kB comprimido), más 20 kB del Worker, 57 kB del cargador Basis y 527 kB (249 kB comprimido) de WebAssembly |
 | Fuentes que se descargan | ≈ 97 kB (IBM Plex Sans 400 y 600, 22 y 24 kB; Source Serif 4, 51 kB; solo el subconjunto latino) |
 | Texturas | 2,6 MB (día 8K), 224 kB (día 2K), 341 kB (nubes), 101 kB (brillo del mar) |
-| Catálogo de datos | 2,85 MB; 801 kB comprimido (19 520 objetos; ver [DATOS.md](DATOS.md)) |
+| Catálogo de datos | 3,41 MB; 821 kB comprimido (19 612 objetos con SATCAT; ver [DATOS.md](DATOS.md)) |
 | La lista de Starlink | 14 a 20 filas pintadas de 11 156 (ventana virtual) |
 | Sombra de la Tierra en el shader | Con la misma hora fija, 25 960 píxeles cambian al activarla y su brillo medio baja de 89 a 55 (−38 %); todos dentro del disco del globo |
 

@@ -15,11 +15,16 @@ El primer despliegue, cuando aún no hay sitio publicado, descarga de CelesTrak.
 ## Qué hace cada ejecución
 
 1. `npm ci` y `npm test`: si algún test falla, no se despliega.
-2. `scripts/ci-data.sh` obtiene los datos (ver abajo).
-3. `npm run build` con `BASE_PATH` fijado por `configure-pages` (en `https://usuario.github.io/orbitwatch/` el sitio cuelga de `/orbitwatch/`; con dominio propio es `/`).
-4. Se sube `dist/` y se despliega.
+2. Se restaura la caché de CelesTrak (`actions/cache`, ≈ 4 MB comprimido, una clave nueva por ejecución). Así cada ejecución programada solo pide `active`, y los otros 39 grupos y el SATCAT una vez al día.
+3. `scripts/ci-data.sh` obtiene los datos (ver abajo).
+4. `npm run build` con `BASE_PATH` fijado por `configure-pages` (en `https://usuario.github.io/orbitwatch/` el sitio cuelga de `/orbitwatch/`; con dominio propio es `/`).
+5. Se sube `dist/` y se despliega.
 
 Los despliegues se ejecutan de uno en uno y uno en marcha no se cancela (cortarlo dejaría el sitio a medio publicar).
+
+## Coste en la cuenta gratuita
+
+En un repositorio público, las GitHub Actions con los ejecutores estándar no gastan minutos del plan gratuito, y el despliegue a Pages desde una Action no cuenta para el límite de 10 compilaciones por hora de Pages. Una ejecución dura pocos minutos y publica menos de 5 MB, muy por debajo del límite de 1 GB del sitio. Cada 2 h son 12 ejecuciones al día. El límite real es la cortesía con CelesTrak: por eso la caché escalonada (≈ 53 peticiones al día). Si se quisiera menos, bastaría cambiar el `cron` a cada 6 h (datos con hasta 6 h) o a uno al día. Un detalle: en repositorios públicos GitHub desactiva las ejecuciones programadas tras 60 días sin actividad en el repositorio.
 
 ## Si CelesTrak falla
 
